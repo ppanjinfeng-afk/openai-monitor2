@@ -1,0 +1,27 @@
+[Unit]
+Description=OpenAI Monitor
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/openai-monitor
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=BIND_HOST=127.0.0.1
+Environment=PUBLIC_HOSTS=xn--2team-cd2h.com,www.xn--2team-cd2h.com
+# For remote admin access on port 3000, change BIND_HOST to 0.0.0.0
+# and enable the basic auth credentials below.
+# Environment=ADMIN_BASIC_AUTH_ENABLED=true
+# Environment=ADMIN_BASIC_AUTH_USER=admin
+# Environment=ADMIN_BASIC_AUTH_PASS=change-this-password
+ExecStart=/usr/bin/node /opt/openai-monitor/server.js
+Restart=always
+RestartSec=5
+KillMode=mixed
+TimeoutStopSec=20
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target
