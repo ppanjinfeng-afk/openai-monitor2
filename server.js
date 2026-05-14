@@ -477,6 +477,10 @@ function getPublicRateLimit(req) {
     return { windowMs: 10 * 60 * 1000, max: 25 };
   }
 
+  if (req.method === 'POST' && pathOnly === '/api/cdk/status') {
+    return { windowMs: 10 * 60 * 1000, max: 30 };
+  }
+
   if (req.method === 'POST' && pathOnly === '/api/cdk/submit-team') {
     return { windowMs: 10 * 60 * 1000, max: 10 };
   }
@@ -556,6 +560,10 @@ function isAllowedActivationOnlyPublicRequest(req) {
   }
 
   if (req.method === 'POST' && pathOnly === '/api/cdk/verify') {
+    return true;
+  }
+
+  if (req.method === 'POST' && pathOnly === '/api/cdk/status') {
     return true;
   }
 
@@ -653,6 +661,10 @@ function isAllowedPublicRequest(req) {
   }
 
   if (req.method === 'POST' && pathOnly === '/api/cdk/verify') {
+    return true;
+  }
+
+  if (req.method === 'POST' && pathOnly === '/api/cdk/status') {
     return true;
   }
 

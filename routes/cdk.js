@@ -305,6 +305,103 @@ function getTeamInventoryPayloadSafely(card, context) {
   }
 }
 
+function getPublicCdkStatusPayload(cardCodeInput) {
+  const cardCode = normalizeCdkCode(cardCodeInput);
+  if (!cardCode || cardCode.length < 8) {
+    return {
+      found: false,
+      status: 'invalid',
+      statusText: '格式无效',
+      email: '',
+      message: '请输入正确的 CDK',
+    };
+  }
+
+  const card = db.prepare('SELECT * FROM cdk_cards WHERE code = ?').get(cardCode);
+  if (!card) {
+    return {
+      found: false,
+      status: 'not_found',
+      statusText: '不存在',
+      email: '',
+      message: 'CDK 不存在或已过期',
+    };
+  }
+
+  const latestTask = getLatestTeamTaskForCard(card.id, card.code);
+  if (latestTask && normalizeTaskStatus(latestTask.status) === 'FAILED') {
+    try {
+      reconcileCdkTeamTaskSuccess(latestTask.id, { source: 'status_preflight_reconcile' });
+    } catch (err) {
+      logCdkRouteError(`status reconcile task ${latestTask.id} failed`, err);
+    }
+  }
+
+  const successfulTask = getSuccessfulTeamTaskForCard(card.id, card.code);
+  if (successfulTask || card.status === 'used') {
+    if (successfulTask) {
+      markCardUsedFromTask(successfulTask);
+    }
+    const email = normalizeEmail(successfulTask?.account_email || card.assigned_email || latestTask?.account_email || '');
+    return {
+      found: true,
+      status: 'used',
+      statusText: '使用',
+      email,
+      message: email ? `此 CDK 已激活给 ${email}` : '此 CDK 已使用',
+      usedAt: successfulTask?.completed_at || card.used_at || '',
+      updatedAt: successfulTask?.updated_at || card.updated_at || '',
+    };
+  }
+
+  const activeTask = getActiveTeamTaskForCard(card.id, card.code);
+  if (activeTask || card.status === 'processing') {
+    if (activeTask) {
+      markCardProcessingFromTask(activeTask);
+    }
+    const email = normalizeEmail(activeTask?.account_email || card.assigned_email || '');
+    return {
+      found: true,
+      status: 'processing',
+      statusText: '处理中',
+      email,
+      message: email ? `此 CDK 正在邀请 ${email}` : '此 CDK 正在处理中',
+      updatedAt: activeTask?.updated_at || card.updated_at || '',
+    };
+  }
+
+  if (card.status === 'expired') {
+    return {
+      found: true,
+      status: 'expired',
+      statusText: '过期',
+      email: normalizeEmail(card.assigned_email || latestTask?.account_email || ''),
+      message: '此 CDK 已过期',
+      updatedAt: card.updated_at || '',
+    };
+  }
+
+  if (card.status === 'unused') {
+    return {
+      found: true,
+      status: 'unused',
+      statusText: '未使用',
+      email: '',
+      message: '此 CDK 未使用',
+      updatedAt: card.updated_at || '',
+    };
+  }
+
+  return {
+    found: true,
+    status: String(card.status || 'unknown'),
+    statusText: '当前不可用',
+    email: normalizeEmail(card.assigned_email || latestTask?.account_email || ''),
+    message: '此 CDK 当前不可用',
+    updatedAt: card.updated_at || '',
+  };
+}
+
 function createTeamInviteTask(cardCodeInput, emailInput, options = {}) {
   const cardCode = String(cardCodeInput || '').trim().toUpperCase();
   const email = normalizeEmail(emailInput);
@@ -660,6 +757,23 @@ router.post('/batch-delete', (req, res) => {
 // ============================================
 // CDK Redemption APIs (Customer-facing)
 // ============================================
+
+router.post('/status', (req, res) => {
+  try {
+    runCdkMaintenanceSafely('status');
+    const payload = getPublicCdkStatusPayload(req.body.cardCode || req.body.code || '');
+    return res.json(payload);
+  } catch (err) {
+    logCdkRouteError('status failed', err);
+    return res.json({
+      found: false,
+      status: 'error',
+      statusText: '查询失败',
+      email: '',
+      message: 'CDK 查询失败，请稍后重试或联系客服处理',
+    });
+  }
+});
 
 /**
  * POST /api/cdk/verify — Verify if a CDK code is valid

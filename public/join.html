@@ -19,7 +19,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 16px;
-      max-width: 1040px;
+      max-width: 1440px;
       margin: 0 auto;
       padding: 0 20px;
     }
@@ -79,13 +79,13 @@
       display: inline-flex;
     }
     .wrap {
-      max-width: 1040px;
+      max-width: 1440px;
       margin: 0 auto;
       padding: 20px;
     }
     .hero {
       display: grid;
-      grid-template-columns: minmax(0, 0.88fr) minmax(360px, 1.12fr);
+      grid-template-columns: minmax(300px, 0.78fr) minmax(380px, 1fr) minmax(280px, 0.56fr);
       gap: 20px;
       align-items: stretch;
     }
@@ -291,6 +291,57 @@
       text-align: right;
       overflow-wrap: anywhere;
     }
+    .query-panel {
+      align-self: start;
+      position: sticky;
+      top: 16px;
+    }
+    .query-form {
+      display: grid;
+      gap: 12px;
+    }
+    .query-result {
+      display: none;
+      margin-top: 16px;
+      border: 1px solid #e3e8f1;
+      border-radius: 8px;
+      background: #f8fbff;
+      padding: 16px;
+    }
+    .query-result.show { display: block; }
+    .query-result.success {
+      border-color: #a7e4c5;
+      background: #ecfdf4;
+    }
+    .query-result.warning {
+      border-color: #f4d58a;
+      background: #fff8e7;
+    }
+    .query-result.error {
+      border-color: #f1b3b3;
+      background: #fff1f1;
+    }
+    .query-status {
+      margin: 0 0 10px;
+      color: #172033;
+      font-size: 24px;
+      font-weight: 900;
+      line-height: 1.2;
+    }
+    .query-row {
+      display: grid;
+      grid-template-columns: 78px 1fr;
+      gap: 10px;
+      padding: 9px 0;
+      border-top: 1px solid rgba(100, 116, 139, 0.16);
+      color: #52627a;
+      font-size: 14px;
+    }
+    .query-row strong {
+      color: #172033;
+      text-align: right;
+      word-break: break-all;
+    }
     textarea {
       width: 100%;
       min-height: 154px;
@@ -391,8 +442,9 @@
       background: #fee2e2;
       color: #991b1b;
     }
-    @media (max-width: 860px) {
+    @media (max-width: 1120px) {
       .hero { grid-template-columns: 1fr; }
+      .query-panel { position: static; }
       .visual { min-height: auto; }
       .visual h1 { font-size: 32px; }
       .inline-actions { grid-template-columns: 1fr; }
@@ -496,6 +548,18 @@
           <div class="batch-result-list" id="batch-result-list"></div>
         </div>
       </div>
+
+      <aside class="panel query-panel">
+        <h2>CDK 查询</h2>
+        <form class="query-form" id="cdk-status-form">
+          <div class="field">
+            <label for="status-cdk">CDK 卡密</label>
+            <input id="status-cdk" type="text" placeholder="TEAM-XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
+          </div>
+          <button class="secondary" id="status-query-btn" type="submit">查询</button>
+        </form>
+        <div class="query-result" id="status-result" aria-live="polite"></div>
+      </aside>
     </section>
   </main>
 
@@ -508,6 +572,10 @@
     const cdkMessage = document.getElementById('cdk-message');
     const resultMessage = document.getElementById('result-message');
     const taskCard = document.getElementById('task-card');
+    const statusForm = document.getElementById('cdk-status-form');
+    const statusCdk = document.getElementById('status-cdk');
+    const statusQueryBtn = document.getElementById('status-query-btn');
+    const statusResult = document.getElementById('status-result');
     let cdkVerified = false;
     let pollTimer = null;
 
@@ -538,6 +606,60 @@
         throw new Error(data.msg || data.error || `HTTP ${res.status}`);
       }
       return data;
+    }
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function getStatusTone(status) {
+      if (status === 'unused') return 'success';
+      if (status === 'used' || status === 'expired' || status === 'not_found' || status === 'invalid') return 'error';
+      return 'warning';
+    }
+
+    function renderCdkStatus(data) {
+      const status = data?.status || 'error';
+      const email = data?.email || '-';
+      statusResult.className = `query-result show ${getStatusTone(status)}`;
+      statusResult.innerHTML = `
+        <div class="query-status">${escapeHtml(data?.statusText || '查询失败')}</div>
+        <div class="query-row"><span>CDK</span><strong>${escapeHtml(statusCdk.value || '-')}</strong></div>
+        <div class="query-row"><span>激活邮箱</span><strong>${escapeHtml(email)}</strong></div>
+        <div class="query-row"><span>说明</span><strong>${escapeHtml(data?.message || '-')}</strong></div>
+      `;
+    }
+
+    if (statusForm) {
+      statusForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const cardCode = String(statusCdk.value || '').trim().toUpperCase();
+        statusCdk.value = cardCode;
+        if (!cardCode) {
+          renderCdkStatus({ status: 'invalid', statusText: '格式无效', email: '', message: '请输入 CDK' });
+          return;
+        }
+
+        statusQueryBtn.disabled = true;
+        statusQueryBtn.textContent = '查询中...';
+        try {
+          const data = await request('/api/cdk/status', {
+            method: 'POST',
+            body: JSON.stringify({ cardCode }),
+          });
+          renderCdkStatus(data);
+        } catch (err) {
+          renderCdkStatus({ status: 'error', statusText: '查询失败', email: '', message: err.message || '请稍后重试' });
+        } finally {
+          statusQueryBtn.disabled = false;
+          statusQueryBtn.textContent = '查询';
+        }
+      });
     }
 
     verifyBtn.onclick = async () => {
