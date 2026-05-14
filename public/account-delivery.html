@@ -372,6 +372,21 @@
       overflow-wrap: anywhere;
     }
 
+    .status-state-wrap {
+      display: flex;
+      align-items: baseline;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .status-time,
+    .lookup-time {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
     .account-box {
       border-color: #a7e4c5;
       background: #ecfdf4;
@@ -433,6 +448,13 @@
       gap: 12px;
       margin-bottom: 8px;
       font-weight: 900;
+    }
+
+    .lookup-status {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 8px;
     }
 
     .lookup-item small {
@@ -536,7 +558,13 @@
         <div class="status" id="order-status">
           <div class="status-row"><span>订单号</span><strong id="status-order">--</strong></div>
           <div class="status-row"><span>金额</span><strong id="status-amount">--</strong></div>
-          <div class="status-row"><span>状态</span><strong id="status-state">--</strong></div>
+          <div class="status-row">
+            <span>状态</span>
+            <strong class="status-state-wrap">
+              <span id="status-state">--</span>
+              <span class="status-time" id="status-time">北京时间 --</span>
+            </strong>
+          </div>
           <div class="actions" id="pay-actions"></div>
         </div>
 
@@ -669,6 +697,41 @@
       return labels[order?.status] || order?.status || '--';
     }
 
+    function normalizeServerTime(value) {
+      const text = String(value || '').trim();
+      if (!text) return '';
+      if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(text)) return text;
+      return `${text.replace(' ', 'T')}Z`;
+    }
+
+    function formatBeijingTime(value) {
+      const normalized = normalizeServerTime(value);
+      if (!normalized) return '--';
+      const date = new Date(normalized);
+      if (Number.isNaN(date.getTime())) return String(value || '--');
+      const parts = new Intl.DateTimeFormat('zh-CN', {
+        timeZone: 'Asia/Shanghai',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      }).formatToParts(date).reduce((acc, part) => {
+        acc[part.type] = part.value;
+        return acc;
+      }, {});
+      return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
+    }
+
+    function getOrderBeijingTimeText(order) {
+      const timeValue = order?.status === 'delivered'
+        ? order.deliveredAt || order.updatedAt || order.createdAt
+        : order?.updatedAt || order?.createdAt || order?.deliveredAt;
+      return `北京时间 ${formatBeijingTime(timeValue)}`;
+    }
+
     function isMobilePaymentBrowser() {
       return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|HarmonyOS|MicroMessenger/i.test(navigator.userAgent || '');
     }
@@ -727,6 +790,7 @@
       document.getElementById('status-order').textContent = order.orderNo || '--';
       document.getElementById('status-amount').textContent = order.amountText || '--';
       document.getElementById('status-state').textContent = getStatusText(order);
+      document.getElementById('status-time').textContent = getOrderBeijingTimeText(order);
       payActions.innerHTML = '';
       qrBox.classList.remove('show');
 
@@ -867,17 +931,24 @@
         return;
       }
 
-      lookupResult.innerHTML = orders.map(order => `
-        <div class="lookup-item">
-          <div class="lookup-head">
-            <span>${escapeHtml(getStatusText(order))}</span>
-            <button class="secondary" type="button" data-order-no="${escapeHtml(order.orderNo)}">查看</button>
+      lookupResult.innerHTML = orders.map(order => {
+        const statusText = getStatusText(order);
+        const timeText = getOrderBeijingTimeText(order);
+        return `
+          <div class="lookup-item">
+            <div class="lookup-head">
+              <span class="lookup-status">
+                <span>${escapeHtml(statusText)}</span>
+                <span class="lookup-time">${escapeHtml(timeText)}</span>
+              </span>
+              <button class="secondary" type="button" data-order-no="${escapeHtml(order.orderNo)}">查看</button>
+            </div>
+            <small>订单号：${escapeHtml(order.orderNo)}</small>
+            <small>金额：${escapeHtml(order.amountText)}</small>
+            <small>交付内容：${escapeHtml(order.accountEmail || '-')}</small>
           </div>
-          <small>订单号：${escapeHtml(order.orderNo)}</small>
-          <small>金额：${escapeHtml(order.amountText)}</small>
-          <small>交付内容：${escapeHtml(order.accountEmail || '-')}</small>
-        </div>
-      `).join('');
+        `;
+      }).join('');
 
       lookupResult.querySelectorAll('button[data-order-no]').forEach(button => {
         button.addEventListener('click', () => {
