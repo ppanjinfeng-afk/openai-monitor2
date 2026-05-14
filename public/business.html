@@ -84,11 +84,12 @@
       margin-top: 36px;
     }
 
-    .product-link {
+    .product-card {
       position: relative;
       display: flex;
-      min-height: 116px;
-      align-items: center;
+      min-height: 156px;
+      flex-direction: column;
+      align-items: flex-start;
       justify-content: space-between;
       gap: 18px;
       padding: 22px 24px;
@@ -101,11 +102,13 @@
       transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
     }
 
-    .product-link::after {
+    .product-card::after {
       content: "";
+      position: absolute;
+      top: 28px;
+      right: 24px;
       width: 42px;
       height: 42px;
-      flex: 0 0 auto;
       border-radius: 50%;
       background:
         linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.12)),
@@ -113,28 +116,69 @@
       opacity: 0.22;
     }
 
-    .product-link:hover,
-    .product-link:focus-visible {
+    .product-card:hover {
       transform: translateY(-2px);
       border-color: rgba(126, 231, 226, 0.64);
       background: rgba(126, 231, 226, 0.12);
-      outline: none;
     }
 
-    .product-link strong {
+    .product-copy {
+      width: 100%;
+      padding-right: 60px;
+    }
+
+    .product-copy strong {
       display: block;
       font-size: clamp(20px, 3vw, 28px);
       line-height: 1.2;
       letter-spacing: 0;
     }
 
-    .product-link span {
+    .product-copy span {
       display: block;
       margin-top: 8px;
       color: rgba(245, 251, 255, 0.72);
       font-size: 14px;
       line-height: 1.5;
       letter-spacing: 0;
+    }
+
+    .enter-button {
+      display: inline-flex;
+      min-width: 104px;
+      min-height: 42px;
+      align-items: center;
+      justify-content: center;
+      padding: 0 22px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 8px;
+      color: #06111d;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0;
+      text-decoration: none;
+      background: var(--cyan);
+      box-shadow: 0 10px 28px rgba(126, 231, 226, 0.22);
+      transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    }
+
+    .enter-button:hover,
+    .enter-button:focus-visible {
+      transform: translateY(-1px);
+      background: #a1f5f0;
+      box-shadow: 0 14px 34px rgba(126, 231, 226, 0.3);
+      outline: none;
+    }
+
+    .daily .enter-button {
+      background: var(--gold);
+      box-shadow: 0 10px 28px rgba(244, 199, 107, 0.2);
+    }
+
+    .daily .enter-button:hover,
+    .daily .enter-button:focus-visible {
+      background: #ffd987;
+      box-shadow: 0 14px 34px rgba(244, 199, 107, 0.28);
     }
 
     .monthly {
@@ -163,8 +207,8 @@
         grid-template-columns: 1fr;
       }
 
-      .product-link {
-        min-height: 104px;
+      .product-card {
+        min-height: 148px;
         padding: 20px;
       }
     }
@@ -176,18 +220,20 @@
     <h1>选择项目</h1>
     <p class="subtitle">请选择要购买的 GPT Business 项目，系统会跳转到对应页面继续完成下单。</p>
     <div class="actions" aria-label="GPT Business 项目入口">
-      <a class="product-link monthly" id="monthly-link" href="https://www.penqda.com/" rel="noopener">
-        <span>
+      <article class="product-card monthly">
+        <div class="product-copy">
           <strong>GPT Business 月卡</strong>
           <span>进入月卡项目</span>
-        </span>
-      </a>
-      <a class="product-link daily" id="daily-link" href="https://xn--2team-cd2h.com" rel="noopener">
-        <span>
+        </div>
+        <a class="enter-button" id="monthly-link" href="https://www.penqda.com/" rel="noopener">进入</a>
+      </article>
+      <article class="product-card daily">
+        <div class="product-copy">
           <strong>GPT Business 日卡</strong>
           <span>进入日卡项目</span>
-        </span>
-      </a>
+        </div>
+        <a class="enter-button" id="daily-link" href="https://xn--2team-cd2h.com" rel="noopener">进入</a>
+      </article>
     </div>
   </main>
 
