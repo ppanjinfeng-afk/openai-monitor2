@@ -25,6 +25,15 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(email));
 }
 
+function normalizeQueryPassword(password) {
+  return String(password || '').trim();
+}
+
+function isValidQueryPassword(password) {
+  const value = normalizeQueryPassword(password);
+  return value.length > 0 && value.length <= 128;
+}
+
 function makeOrderNo() {
   const stamp = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14);
   return `ACC${stamp}${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
@@ -205,6 +214,7 @@ function toPublicOrder(order, options = {}) {
       : '',
     payerName: options.includeReceipt ? order.payer_name || '' : undefined,
     matchStatus: options.includeReceipt ? order.match_status || '' : undefined,
+    queryPassword: options.includeQueryPassword ? order.query_password || '' : undefined,
     paidAt: order.paid_at,
     deliveredAt: order.delivered_at,
     createdAt: order.created_at,
@@ -212,10 +222,11 @@ function toPublicOrder(order, options = {}) {
   };
 }
 
-function createPendingOrder({ buyerEmail, paymentMethod }) {
+function createPendingOrder({ buyerEmail, paymentMethod, queryPassword }) {
   releaseExpiredReservations();
 
   const normalizedBuyerEmail = normalizeEmail(buyerEmail);
+  const normalizedQueryPassword = normalizeQueryPassword(queryPassword);
   const orderNo = makeOrderNo();
   const publicToken = makePublicToken();
   const pendingOrder = {
@@ -225,6 +236,7 @@ function createPendingOrder({ buyerEmail, paymentMethod }) {
     payment_method: paymentMethod,
     amount_cents: getPriceCents(),
     currency: DEFAULT_CURRENCY,
+    query_password: normalizedQueryPassword,
   };
   const payUrl = paymentMethod === 'mock' ? '' : buildProviderPayUrl(paymentMethod, pendingOrder);
 
@@ -252,8 +264,9 @@ function createPendingOrder({ buyerEmail, paymentMethod }) {
         currency,
         public_token,
         pay_url,
+        query_password,
         account_item_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       pendingOrder.order_no,
       pendingOrder.buyer_email,
@@ -262,6 +275,7 @@ function createPendingOrder({ buyerEmail, paymentMethod }) {
       pendingOrder.currency,
       pendingOrder.public_token,
       payUrl,
+      pendingOrder.query_password,
       item.id
     );
 
@@ -438,10 +452,15 @@ router.get('/product', (req, res) => {
 
 router.post('/orders', (req, res) => {
   const buyerEmail = normalizeEmail(req.body.buyer_email || req.body.email);
+  const queryPassword = normalizeQueryPassword(req.body.query_password || req.body.password);
   const paymentMethod = String(req.body.payment_method || req.body.method || 'alipay').toLowerCase();
 
   if (!isValidEmail(buyerEmail)) {
     return res.status(400).json({ error: '请输入接收邮箱' });
+  }
+
+  if (!isValidQueryPassword(queryPassword)) {
+    return res.status(400).json({ error: '请设置查询密码，最多 128 个字符' });
   }
 
   if (!SUPPORTED_METHODS.has(paymentMethod)) {
@@ -453,7 +472,7 @@ router.post('/orders', (req, res) => {
   }
 
   try {
-    const order = createPendingOrder({ buyerEmail, paymentMethod });
+    const order = createPendingOrder({ buyerEmail, paymentMethod, queryPassword });
     res.status(201).json({
       order: toPublicOrder(order, { includeToken: true, includeAccount: true }),
       providerConfigured: isProviderConfigured(order.payment_method, order.pay_url),
@@ -540,17 +559,23 @@ router.get('/status/:orderNo', (req, res) => {
 
 router.post('/query-by-email', (req, res) => {
   const buyerEmail = normalizeEmail(req.body.buyer_email || req.body.email);
+  const queryPassword = normalizeQueryPassword(req.body.query_password || req.body.password);
   if (!isValidEmail(buyerEmail)) {
     return res.status(400).json({ error: '请输入下单邮箱' });
+  }
+
+  if (!isValidQueryPassword(queryPassword)) {
+    return res.status(400).json({ error: '请输入查询密码' });
   }
 
   const orders = db.prepare(`
     SELECT *
     FROM account_delivery_orders
     WHERE buyer_email = ?
+      AND query_password = ?
     ORDER BY created_at DESC
     LIMIT 10
-  `).all(buyerEmail);
+  `).all(buyerEmail, queryPassword);
 
   res.json({
     orders: orders.map(order => toPublicOrder(order, {
@@ -752,6 +777,7 @@ router.get('/orders', (req, res) => {
     orders: orders.map(order => toPublicOrder(order, {
       includeAccount: true,
       includeReceipt: true,
+      includeQueryPassword: true,
     })),
     summary,
     total: Number(total?.count || 0),

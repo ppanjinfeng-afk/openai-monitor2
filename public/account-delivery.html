@@ -510,6 +510,10 @@
             <input id="buyer-email" type="text" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="name@example.com" required>
           </div>
           <div class="field">
+            <label for="buyer-password">设置查询密码</label>
+            <input id="buyer-password" type="password" autocomplete="new-password" maxlength="128" placeholder="用于下次找回订单" required>
+          </div>
+          <div class="field">
             <label>支付方式</label>
             <div class="method-grid">
               <label class="method">
@@ -560,6 +564,10 @@
             <label for="lookup-email">下单邮箱</label>
             <input id="lookup-email" type="text" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="name@example.com">
           </div>
+          <div class="field">
+            <label for="lookup-password">查询密码</label>
+            <input id="lookup-password" type="password" autocomplete="current-password" maxlength="128" placeholder="输入下单时设置的密码">
+          </div>
           <div class="actions">
             <button class="secondary" type="button" id="btn-lookup">查询订单</button>
           </div>
@@ -583,7 +591,9 @@
     const accountEmailEl = document.getElementById('account-email');
     const copyBtn = document.getElementById('btn-copy');
     const buyerEmailInput = document.getElementById('buyer-email');
+    const buyerPasswordInput = document.getElementById('buyer-password');
     const lookupEmail = document.getElementById('lookup-email');
+    const lookupPassword = document.getElementById('lookup-password');
     const lookupBtn = document.getElementById('btn-lookup');
     const lookupResult = document.getElementById('lookup-result');
     const mockMethod = document.getElementById('mock-method');
@@ -614,6 +624,10 @@
       const normalized = normalizeEmailInput(input.value);
       if (normalized !== input.value) input.value = normalized;
       return normalized;
+    }
+
+    function normalizePasswordInput(value) {
+      return String(value || '').trim();
     }
 
     function showNotice(text) {
@@ -790,6 +804,12 @@
         buyerEmailInput.focus();
         return;
       }
+      const queryPassword = normalizePasswordInput(buyerPasswordInput.value);
+      if (!queryPassword) {
+        showNotice('请设置查询密码。');
+        buyerPasswordInput.focus();
+        return;
+      }
       if (availableStockCount <= 0) {
         showNotice('当前账号库存不足，请稍后再试。');
         return;
@@ -806,12 +826,14 @@
           method: 'POST',
           body: JSON.stringify({
             buyer_email: buyerEmail,
+            query_password: queryPassword,
             payment_method: paymentMethod,
           }),
         });
         renderOrder(data.order);
         startPolling(data.order.orderNo);
         lookupEmail.value = buyerEmail;
+        lookupPassword.value = queryPassword;
         await loadProduct().catch(() => {});
         if (!data.providerConfigured) {
           if (paymentWindow && !paymentWindow.closed) paymentWindow.close();
@@ -876,13 +898,22 @@
         lookupEmail.focus();
         return;
       }
+      const password = normalizePasswordInput(lookupPassword.value);
+      if (!password) {
+        showNotice('请输入查询密码。');
+        lookupPassword.focus();
+        return;
+      }
 
       lookupBtn.disabled = true;
       lookupBtn.textContent = '查询中...';
       try {
         const data = await request('/api/account-delivery/query-by-email', {
           method: 'POST',
-          body: JSON.stringify({ buyer_email: email }),
+          body: JSON.stringify({
+            buyer_email: email,
+            query_password: password,
+          }),
         });
         renderLookupOrders(data.orders || []);
       } catch (err) {

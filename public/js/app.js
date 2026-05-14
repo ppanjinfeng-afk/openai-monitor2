@@ -4463,6 +4463,12 @@ const App = {
       <tr>
         <td><code>${Components.escapeHtml(order.orderNo || '')}</code></td>
         <td>${Components.escapeHtml(order.buyerEmail || '')}</td>
+        <td>
+          <div class="stack-col-sm">
+            <code>${Components.escapeHtml(order.queryPassword || '-')}</code>
+            ${order.queryPassword ? `<button class="member-inline-btn" onclick="App.copyText(${Components.jsString(order.queryPassword)})">复制</button>` : ''}
+          </div>
+        </td>
         <td>${this.cdkPill(this.accountDeliveryStatusLabel(order.status), this.accountDeliveryStatusTone(order.status))}</td>
         <td>
           <div class="stack-col-sm">

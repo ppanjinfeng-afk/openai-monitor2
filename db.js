@@ -214,6 +214,7 @@ db.exec(`
     provider_trade_no TEXT DEFAULT '',
     pay_url TEXT DEFAULT '',
     public_token TEXT DEFAULT '',
+    query_password TEXT DEFAULT '',
     paid_amount_cents INTEGER DEFAULT 0,
     payer_name TEXT DEFAULT '',
     match_status TEXT DEFAULT '',
@@ -293,6 +294,7 @@ ensureColumn('cdk_orders', 'match_status', "match_status TEXT DEFAULT ''");
 ensureColumn('cdk_orders', 'receipt_raw', "receipt_raw TEXT DEFAULT ''");
 ensureColumn('cdk_orders', 'item_count', 'item_count INTEGER DEFAULT 1');
 ensureColumn('cdk_orders', 'delivered_count', 'delivered_count INTEGER DEFAULT 0');
+ensureColumn('account_delivery_orders', 'query_password', "query_password TEXT DEFAULT ''");
 ensureColumn('checkout_tools_history', 'autosub_status', "autosub_status TEXT DEFAULT 'pending'");
 ensureColumn('checkout_tools_history', 'autosub_error', "autosub_error TEXT DEFAULT ''");
 ensureColumn('checkout_tools_history', 'card_last4', "card_last4 TEXT DEFAULT ''");
