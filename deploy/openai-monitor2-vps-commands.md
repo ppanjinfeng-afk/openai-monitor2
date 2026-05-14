@@ -9,6 +9,7 @@
 ```text
 2人team.com          A  <VPS_IP>
 www.2人team.com      A  <VPS_IP>
+business.2人team.com A  <VPS_IP>
 activate.2人team.com A  <VPS_IP>
 admin.2人team.com    A  <VPS_IP>
 ```
@@ -18,6 +19,7 @@ admin.2人team.com    A  <VPS_IP>
 ```text
 2人team.com          xn--2team-cd2h.com
 www.2人team.com      www.xn--2team-cd2h.com
+business.2人team.com business.xn--2team-cd2h.com
 activate.2人team.com activate.xn--2team-cd2h.com
 admin.2人team.com    admin.xn--2team-cd2h.com
 ```
@@ -41,7 +43,7 @@ curl -fsSL https://raw.githubusercontent.com/ppanjinfeng-afk/openai-monitor2/mai
       ADMIN_BASIC_AUTH_ENABLED=true \
       ADMIN_BASIC_AUTH_USER='派大星' \
       ADMIN_BASIC_AUTH_PASS="$ADMIN_PASS" \
-      CERTBOT_DOMAINS='xn--2team-cd2h.com,www.xn--2team-cd2h.com,activate.xn--2team-cd2h.com,admin.xn--2team-cd2h.com' \
+      CERTBOT_DOMAINS='xn--2team-cd2h.com,www.xn--2team-cd2h.com,business.xn--2team-cd2h.com,activate.xn--2team-cd2h.com,admin.xn--2team-cd2h.com' \
       bash -s -- https://github.com/ppanjinfeng-afk/openai-monitor2.git /opt/openai-monitor
 unset ADMIN_PASS
 ```
@@ -57,6 +59,13 @@ sudo systemctl reload nginx
 
 ```bash
 sudo certbot --nginx -d activate.xn--2team-cd2h.com --redirect
+sudo systemctl reload nginx
+```
+
+项目选择页域名补签：
+
+```bash
+sudo certbot --nginx -d business.xn--2team-cd2h.com --redirect
 sudo systemctl reload nginx
 ```
 
@@ -104,10 +113,10 @@ sudo systemctl disable --now openai-monitor-cdk-expire.timer openai-monitor-cdk-
 sudo rm -f /etc/systemd/system/openai-monitor-cdk-expire.timer /etc/systemd/system/openai-monitor-cdk-expire.service
 sudo cp deploy/nginx/openai-monitor.conf /etc/nginx/sites-available/openai-monitor.conf
 sudo mkdir -p /etc/systemd/system/openai-monitor.service.d
-printf '[Service]\nEnvironment=PUPPETEER_CACHE_DIR=/home/ubuntu/.cache/puppeteer\nEnvironment=PUBLIC_BASE_URL=https://xn--2team-cd2h.com\nEnvironment=CDK_TEAM_WORKER_CONCURRENCY=3\nEnvironment=BROWSER_TASK_CONCURRENCY=5\nEnvironment=BROWSER_MAINTENANCE_CONCURRENCY=2\nEnvironment=CDK_TEAM_INVITE_TIMEOUT_MS=300000\nEnvironment=OVERFLOW_REBALANCE_WORKSPACE_CONCURRENCY=2\nEnvironment=MEMBER_REMOVAL_WORKSPACE_CONCURRENCY=3\nEnvironment=MEMBER_REMOVAL_MEMBER_CONCURRENCY=6\nEnvironment=MEMBER_CLEANUP_SYNC_CONCURRENCY=3\n' | sudo tee /etc/systemd/system/openai-monitor.service.d/runtime.conf >/dev/null
+printf '[Service]\nEnvironment=PUPPETEER_CACHE_DIR=/home/ubuntu/.cache/puppeteer\nEnvironment=PUBLIC_BASE_URL=https://xn--2team-cd2h.com\nEnvironment=BUSINESS_PUBLIC_HOSTS=business.xn--2team-cd2h.com\nEnvironment=CDK_TEAM_WORKER_CONCURRENCY=3\nEnvironment=BROWSER_TASK_CONCURRENCY=5\nEnvironment=BROWSER_MAINTENANCE_CONCURRENCY=2\nEnvironment=CDK_TEAM_INVITE_TIMEOUT_MS=300000\nEnvironment=OVERFLOW_REBALANCE_WORKSPACE_CONCURRENCY=2\nEnvironment=MEMBER_REMOVAL_WORKSPACE_CONCURRENCY=3\nEnvironment=MEMBER_REMOVAL_MEMBER_CONCURRENCY=6\nEnvironment=MEMBER_CLEANUP_SYNC_CONCURRENCY=3\n' | sudo tee /etc/systemd/system/openai-monitor.service.d/runtime.conf >/dev/null
 sudo systemctl daemon-reload
 sudo nginx -t
-sudo certbot --nginx --non-interactive --agree-tos --redirect --register-unsafely-without-email -d xn--2team-cd2h.com -d www.xn--2team-cd2h.com
+sudo certbot --nginx --non-interactive --agree-tos --redirect --register-unsafely-without-email -d xn--2team-cd2h.com -d www.xn--2team-cd2h.com -d business.xn--2team-cd2h.com
 sudo certbot --nginx --non-interactive --agree-tos --redirect --register-unsafely-without-email -d activate.xn--2team-cd2h.com
 sudo certbot --nginx --non-interactive --agree-tos --redirect --register-unsafely-without-email -d admin.xn--2team-cd2h.com
 sudo nginx -t
@@ -156,6 +165,7 @@ sudo systemctl restart openai-monitor
 ## 5. 当前站点分工
 
 ```text
+独立项目选择站：https://business.2人team.com/
 项目选择页：https://2人team.com/business
 购买页：https://2人team.com/buy
 购买域名加入页：https://2人team.com/join

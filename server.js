@@ -14,13 +14,19 @@ const PUBLIC_HOSTS = new Set(
     .map(host => host.trim().toLowerCase())
     .filter(Boolean)
 );
+const BUSINESS_PUBLIC_HOSTS = new Set(
+  (process.env.BUSINESS_PUBLIC_HOSTS || 'business.xn--2team-cd2h.com')
+    .split(',')
+    .map(host => host.trim().toLowerCase())
+    .filter(Boolean)
+);
 const ACTIVATION_ONLY_PUBLIC_HOSTS = new Set(
   (process.env.ACTIVATION_ONLY_PUBLIC_HOSTS || 'activate.xn--2team-cd2h.com')
     .split(',')
     .map(host => host.trim().toLowerCase())
     .filter(Boolean)
 );
-const ALL_PUBLIC_HOSTS = new Set([...PUBLIC_HOSTS, ...ACTIVATION_ONLY_PUBLIC_HOSTS]);
+const ALL_PUBLIC_HOSTS = new Set([...PUBLIC_HOSTS, ...BUSINESS_PUBLIC_HOSTS, ...ACTIVATION_ONLY_PUBLIC_HOSTS]);
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 const LOOPBACK_IPS = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
 const publicRateBuckets = new Map();
@@ -41,6 +47,11 @@ function isPublicHost(req) {
 function isActivationOnlyPublicHost(req) {
   const hostname = String(req.hostname || '').toLowerCase();
   return ACTIVATION_ONLY_PUBLIC_HOSTS.has(hostname);
+}
+
+function isBusinessPublicHost(req) {
+  const hostname = String(req.hostname || '').toLowerCase();
+  return BUSINESS_PUBLIC_HOSTS.has(hostname);
 }
 
 function isAllowedCorsOrigin(origin) {
@@ -563,9 +574,32 @@ function isAllowedActivationOnlyPublicRequest(req) {
   return false;
 }
 
+function isAllowedBusinessPublicRequest(req) {
+  const pathOnly = req.path;
+  const isReadMethod = req.method === 'GET' || req.method === 'HEAD';
+
+  if (isReadMethod && ['/', '/business', '/business.html', '/favicon.ico'].includes(pathOnly)) {
+    return true;
+  }
+
+  if (isReadMethod && pathOnly.startsWith('/assets/')) {
+    return true;
+  }
+
+  if (isReadMethod && pathOnly === '/api/public/business-links') {
+    return true;
+  }
+
+  return false;
+}
+
 function isAllowedPublicRequest(req) {
   if (req.isActivationOnlyPublicHost) {
     return isAllowedActivationOnlyPublicRequest(req);
+  }
+
+  if (req.isBusinessPublicHost) {
+    return isAllowedBusinessPublicRequest(req);
   }
 
   const pathOnly = req.path;
@@ -649,6 +683,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use((req, res, next) => {
   req.isPublicHost = isPublicHost(req) && isLoopbackRequest(req);
   req.isActivationOnlyPublicHost = isActivationOnlyPublicHost(req) && isLoopbackRequest(req);
+  req.isBusinessPublicHost = isBusinessPublicHost(req) && isLoopbackRequest(req);
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'same-origin');
@@ -673,6 +708,14 @@ app.use((req, res, next) => {
     }
     if (isReadMethod && ['/buy', '/buy.html'].includes(req.path)) {
       return res.redirect(302, '/');
+    }
+  }
+
+  if (req.isBusinessPublicHost) {
+    const isReadMethod = req.method === 'GET' || req.method === 'HEAD';
+    if (isReadMethod && ['/', '/business', '/business.html'].includes(req.path)) {
+      res.setHeader('Cache-Control', 'no-store');
+      return res.sendFile(businessPagePath);
     }
   }
 
