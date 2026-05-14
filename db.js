@@ -348,6 +348,8 @@ const defaultSettings = [
   ['daily_summary_hour', '9'],
   ['invite_cooldown_minutes', '5'],
   ['public_tunnel_enabled', 'true'],
+  ['public_business_monthly_url', 'https://www.penqda.com/'],
+  ['public_business_daily_url', 'https://xn--2team-cd2h.com'],
   ['cdk_team_price_cents', String(Number.parseInt(process.env.CDK_TEAM_PRICE_CENTS || '200', 10) || 200)],
   ['untracked_members_auto_kick_enabled', 'false'],
   ['stale_members_auto_kick_enabled', 'false'],

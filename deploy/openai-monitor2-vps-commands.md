@@ -156,6 +156,7 @@ sudo systemctl restart openai-monitor
 ## 5. 当前站点分工
 
 ```text
+项目选择页：https://2人team.com/business
 购买页：https://2人team.com/buy
 购买域名加入页：https://2人team.com/join
 只有激活页：https://activate.2人team.com/

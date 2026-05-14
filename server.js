@@ -30,6 +30,7 @@ const ADMIN_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const publicDir = path.join(__dirname, 'public');
 const maintenancePagePath = path.join(__dirname, 'public', 'maintenance.html');
 const activationOnlyPagePath = path.join(__dirname, 'public', 'activation-only.html');
+const businessPagePath = path.join(__dirname, 'public', 'business.html');
 const getSettingValueStmt = db.prepare('SELECT value FROM settings WHERE key = ?');
 
 function isPublicHost(req) {
@@ -58,6 +59,33 @@ function isAllowedCorsOrigin(origin) {
 function getSettingValue(key, fallback = '') {
   const row = getSettingValueStmt.get(key);
   return row ? row.value : fallback;
+}
+
+function normalizePublicLink(value, fallback) {
+  const text = String(value || '').trim();
+  if (!text) {
+    return fallback;
+  }
+  if (/^https?:\/\//i.test(text)) {
+    return text;
+  }
+  if (text.startsWith('/') && !text.startsWith('//')) {
+    return text;
+  }
+  return fallback;
+}
+
+function getBusinessProductLinks() {
+  return {
+    monthly: normalizePublicLink(
+      getSettingValue('public_business_monthly_url', process.env.PUBLIC_BUSINESS_MONTHLY_URL || 'https://www.penqda.com/'),
+      'https://www.penqda.com/'
+    ),
+    daily: normalizePublicLink(
+      getSettingValue('public_business_daily_url', process.env.PUBLIC_BUSINESS_DAILY_URL || 'https://xn--2team-cd2h.com'),
+      'https://xn--2team-cd2h.com'
+    ),
+  };
 }
 
 function parseBoolean(value, fallback = false) {
@@ -543,7 +571,7 @@ function isAllowedPublicRequest(req) {
   const pathOnly = req.path;
   const isReadMethod = req.method === 'GET' || req.method === 'HEAD';
 
-  if (isReadMethod && ['/', '/buy', '/join', '/buy.html', '/join.html', '/favicon.ico'].includes(pathOnly)) {
+  if (isReadMethod && ['/', '/business', '/business.html', '/buy', '/join', '/buy.html', '/join.html', '/favicon.ico'].includes(pathOnly)) {
     return true;
   }
 
@@ -552,6 +580,10 @@ function isAllowedPublicRequest(req) {
   }
 
   if (isReadMethod && pathOnly === '/api/payments/product') {
+    return true;
+  }
+
+  if (isReadMethod && pathOnly === '/api/public/business-links') {
     return true;
   }
 
@@ -732,6 +764,16 @@ app.use('/api/workspaces', require('./routes/workspaces'));
 app.use('/api/checkout-tools', require('./routes/checkout-tools'));
 app.use('/api/cdk', require('./routes/cdk'));
 app.use('/api/payments', require('./routes/payments'));
+
+app.get('/api/public/business-links', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(getBusinessProductLinks());
+});
+
+app.get(['/business', '/business.html'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(businessPagePath);
+});
 
 // CDK purchase page
 app.get('/buy', (req, res) => {
