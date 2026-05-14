@@ -125,6 +125,13 @@ sudo env PUBLIC_BASE_URL='https://xn--2team-cd2h.com' node deploy/scripts/repair
 sudo systemctl restart openai-monitor
 ```
 
+一次性删除超过 1 天未使用的 Team CDK：
+
+```bash
+cd /opt/openai-monitor
+sudo node scripts/delete-old-cdks.js --days=1 --status=unused --plan-type=team_invite
+```
+
 ## 4. 设置后台账号密码
 
 在 VPS 上运行。中文用户名也支持：
