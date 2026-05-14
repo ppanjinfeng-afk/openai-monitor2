@@ -15,7 +15,7 @@ const PUBLIC_HOSTS = new Set(
     .filter(Boolean)
 );
 const BUSINESS_PUBLIC_HOSTS = new Set(
-  (process.env.BUSINESS_PUBLIC_HOSTS || 'business.panqda.com')
+  (process.env.BUSINESS_PUBLIC_HOSTS || 'business.panqda.com,business.xn--2team-cd2h.com')
     .split(',')
     .map(host => host.trim().toLowerCase())
     .filter(Boolean)
@@ -97,8 +97,8 @@ function getBusinessProductLinks() {
       'https://xn--2team-cd2h.com'
     ),
     twoSeat: normalizePublicLink(
-      getSettingValue('public_business_two_seat_url', process.env.PUBLIC_BUSINESS_TWO_SEAT_URL || 'https://www.penqda.com/'),
-      'https://www.penqda.com/'
+      getSettingValue('public_business_two_seat_url', process.env.PUBLIC_BUSINESS_TWO_SEAT_URL || 'https://business.xn--2team-cd2h.com/'),
+      'https://business.xn--2team-cd2h.com/'
     ),
   };
 }
