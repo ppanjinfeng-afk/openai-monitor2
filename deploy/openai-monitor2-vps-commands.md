@@ -96,9 +96,15 @@ sudo cp deploy/systemd/openai-monitor-cdk-expire.timer /etc/systemd/system/opena
 sudo cp deploy/nginx/openai-monitor.conf /etc/nginx/sites-available/openai-monitor.conf
 sudo systemctl daemon-reload
 sudo nginx -t
+sudo certbot --nginx --non-interactive --agree-tos --redirect --register-unsafely-without-email -d xn--2team-cd2h.com -d www.xn--2team-cd2h.com
+sudo certbot --nginx --non-interactive --agree-tos --redirect --register-unsafely-without-email -d activate.xn--2team-cd2h.com
+sudo certbot --nginx --non-interactive --agree-tos --redirect --register-unsafely-without-email -d admin.xn--2team-cd2h.com
+sudo nginx -t
 sudo systemctl restart openai-monitor
 sudo systemctl reload nginx
 ```
+
+注意：`deploy/nginx/openai-monitor.conf` 是基础 HTTP 配置；每次复制它之后都要重跑上面的 `certbot` 三条命令，把 HTTPS 配置重新写回 nginx。
 
 ## 4. 设置后台账号密码
 
