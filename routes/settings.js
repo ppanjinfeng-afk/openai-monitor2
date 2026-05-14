@@ -31,6 +31,7 @@ router.put('/', (req, res) => {
     'invite_cooldown_minutes',
     'public_tunnel_enabled',
     'cdk_team_price_cents',
+    'account_delivery_price_cents',
     'untracked_members_auto_kick_enabled',
     'stale_members_auto_kick_enabled',
     'stale_members_auto_kick_hours',
@@ -39,7 +40,7 @@ router.put('/', (req, res) => {
   const updateAll = db.transaction(() => {
     for (const [key, value] of Object.entries(req.body)) {
       if (allowedKeys.includes(key)) {
-        if (key === 'cdk_team_price_cents') {
+        if (key === 'cdk_team_price_cents' || key === 'account_delivery_price_cents') {
           const cents = Number.parseInt(value, 10);
           if (!Number.isFinite(cents) || cents < 1 || cents > 999999) {
             const err = new Error('CDK 单价必须在 0.01 到 9999.99 元之间');

@@ -15,7 +15,13 @@ const PUBLIC_HOSTS = new Set(
     .filter(Boolean)
 );
 const BUSINESS_PUBLIC_HOSTS = new Set(
-  (process.env.BUSINESS_PUBLIC_HOSTS || 'business.panqda.com,business.xn--2team-cd2h.com')
+  (process.env.BUSINESS_PUBLIC_HOSTS || 'business.panqda.com')
+    .split(',')
+    .map(host => host.trim().toLowerCase())
+    .filter(Boolean)
+);
+const ACCOUNT_DELIVERY_PUBLIC_HOSTS = new Set(
+  (process.env.ACCOUNT_DELIVERY_PUBLIC_HOSTS || 'business.xn--2team-cd2h.com')
     .split(',')
     .map(host => host.trim().toLowerCase())
     .filter(Boolean)
@@ -26,7 +32,12 @@ const ACTIVATION_ONLY_PUBLIC_HOSTS = new Set(
     .map(host => host.trim().toLowerCase())
     .filter(Boolean)
 );
-const ALL_PUBLIC_HOSTS = new Set([...PUBLIC_HOSTS, ...BUSINESS_PUBLIC_HOSTS, ...ACTIVATION_ONLY_PUBLIC_HOSTS]);
+const ALL_PUBLIC_HOSTS = new Set([
+  ...PUBLIC_HOSTS,
+  ...BUSINESS_PUBLIC_HOSTS,
+  ...ACCOUNT_DELIVERY_PUBLIC_HOSTS,
+  ...ACTIVATION_ONLY_PUBLIC_HOSTS,
+]);
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 const LOOPBACK_IPS = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
 const publicRateBuckets = new Map();
@@ -37,6 +48,7 @@ const publicDir = path.join(__dirname, 'public');
 const maintenancePagePath = path.join(__dirname, 'public', 'maintenance.html');
 const activationOnlyPagePath = path.join(__dirname, 'public', 'activation-only.html');
 const businessPagePath = path.join(__dirname, 'public', 'business.html');
+const accountDeliveryPagePath = path.join(__dirname, 'public', 'account-delivery.html');
 const getSettingValueStmt = db.prepare('SELECT value FROM settings WHERE key = ?');
 
 function isPublicHost(req) {
@@ -52,6 +64,11 @@ function isActivationOnlyPublicHost(req) {
 function isBusinessPublicHost(req) {
   const hostname = String(req.hostname || '').toLowerCase();
   return BUSINESS_PUBLIC_HOSTS.has(hostname);
+}
+
+function isAccountDeliveryPublicHost(req) {
+  const hostname = String(req.hostname || '').toLowerCase();
+  return ACCOUNT_DELIVERY_PUBLIC_HOSTS.has(hostname);
 }
 
 function isAllowedCorsOrigin(origin) {
@@ -461,6 +478,10 @@ function getPublicRateLimit(req) {
     return { windowMs: 10 * 60 * 1000, max: 10 };
   }
 
+  if (req.method === 'POST' && pathOnly === '/api/account-delivery/orders') {
+    return { windowMs: 10 * 60 * 1000, max: 10 };
+  }
+
   if (req.method === 'POST' && pathOnly === '/api/payments/orders/batch') {
     return { windowMs: 10 * 60 * 1000, max: 4 };
   }
@@ -473,7 +494,15 @@ function getPublicRateLimit(req) {
     return { windowMs: 5 * 60 * 1000, max: 120 };
   }
 
+  if (req.method === 'GET' && /^\/api\/account-delivery\/(?:orders|status)\/[^/]+$/.test(pathOnly)) {
+    return { windowMs: 5 * 60 * 1000, max: 120 };
+  }
+
   if (req.method === 'POST' && pathOnly === '/api/payments/query-by-email') {
+    return { windowMs: 10 * 60 * 1000, max: 20 };
+  }
+
+  if (req.method === 'POST' && pathOnly === '/api/account-delivery/query-by-email') {
     return { windowMs: 10 * 60 * 1000, max: 20 };
   }
 
@@ -605,9 +634,55 @@ function isAllowedBusinessPublicRequest(req) {
   return false;
 }
 
+function isAllowedAccountDeliveryPublicRequest(req) {
+  const pathOnly = req.path;
+  const isReadMethod = req.method === 'GET' || req.method === 'HEAD';
+
+  if (isReadMethod && ['/', '/account-delivery', '/account-delivery.html', '/favicon.ico'].includes(pathOnly)) {
+    return true;
+  }
+
+  if (isReadMethod && pathOnly.startsWith('/assets/')) {
+    return true;
+  }
+
+  if (isReadMethod && pathOnly === '/api/account-delivery/product') {
+    return true;
+  }
+
+  if (req.method === 'POST' && pathOnly === '/api/account-delivery/orders') {
+    return true;
+  }
+
+  if (isReadMethod && /^\/api\/account-delivery\/(?:orders|status)\/[^/]+$/.test(pathOnly)) {
+    return true;
+  }
+
+  if (req.method === 'POST' && pathOnly === '/api/account-delivery/query-by-email') {
+    return true;
+  }
+
+  if (req.method === 'POST' && /^\/api\/account-delivery\/orders\/[^/]+\/mock-pay$/.test(pathOnly)) {
+    return true;
+  }
+
+  if (req.method === 'POST' && (
+    pathOnly === '/api/account-delivery/alipay/notify'
+    || pathOnly === '/api/account-delivery/alipay/notify/'
+  )) {
+    return true;
+  }
+
+  return false;
+}
+
 function isAllowedPublicRequest(req) {
   if (req.isActivationOnlyPublicHost) {
     return isAllowedActivationOnlyPublicRequest(req);
+  }
+
+  if (req.isAccountDeliveryPublicHost) {
+    return isAllowedAccountDeliveryPublicRequest(req);
   }
 
   if (req.isBusinessPublicHost) {
@@ -700,6 +775,7 @@ app.use((req, res, next) => {
   req.isPublicHost = isPublicHost(req) && isLoopbackRequest(req);
   req.isActivationOnlyPublicHost = isActivationOnlyPublicHost(req) && isLoopbackRequest(req);
   req.isBusinessPublicHost = isBusinessPublicHost(req) && isLoopbackRequest(req);
+  req.isAccountDeliveryPublicHost = isAccountDeliveryPublicHost(req) && isLoopbackRequest(req);
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'same-origin');
@@ -724,6 +800,14 @@ app.use((req, res, next) => {
     }
     if (isReadMethod && ['/buy', '/buy.html'].includes(req.path)) {
       return res.redirect(302, '/');
+    }
+  }
+
+  if (req.isAccountDeliveryPublicHost) {
+    const isReadMethod = req.method === 'GET' || req.method === 'HEAD';
+    if (isReadMethod && ['/', '/account-delivery', '/account-delivery.html'].includes(req.path)) {
+      res.setHeader('Cache-Control', 'no-store');
+      return res.sendFile(accountDeliveryPagePath);
     }
   }
 
@@ -823,6 +907,7 @@ app.use('/api/workspaces', require('./routes/workspaces'));
 app.use('/api/checkout-tools', require('./routes/checkout-tools'));
 app.use('/api/cdk', require('./routes/cdk'));
 app.use('/api/payments', require('./routes/payments'));
+app.use('/api/account-delivery', require('./routes/account-delivery'));
 
 app.get('/api/public/business-links', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
@@ -832,6 +917,11 @@ app.get('/api/public/business-links', (req, res) => {
 app.get(['/business', '/business.html'], (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.sendFile(businessPagePath);
+});
+
+app.get(['/account-delivery', '/account-delivery.html'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(accountDeliveryPagePath);
 });
 
 // CDK purchase page

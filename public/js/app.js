@@ -12,6 +12,8 @@ const App = {
   currentCdkCardsPage: 1,
   currentCdkOrdersPage: 1,
   currentCdkTasksPage: 1,
+  currentAccountDeliveryItemsPage: 1,
+  currentAccountDeliveryOrdersPage: 1,
   cdkPageLimit: 10,
   searchTimeout: null,
   autoRefreshInterval: null,
@@ -57,6 +59,9 @@ const App = {
   cdkTasksData: { tasks: [] },
   cdkOrdersData: { orders: [], summary: {} },
   cdkTraceData: null,
+  accountDeliveryItemsData: { items: [], summary: {} },
+  accountDeliveryOrdersData: { orders: [], summary: {} },
+  accountDeliveryProductData: null,
   systemMetricsHistory: { cpu: [], memory: [] },
   systemMetricsTimer: null,
   systemMetricsMaxPoints: 60,
@@ -295,6 +300,9 @@ const App = {
       case 'cdk-manage':
         await this.loadCdkPage();
         break;
+      case 'account-delivery':
+        await this.loadAccountDeliveryPage();
+        break;
       case 'system-monitor':
         await this.loadSystemMetrics(options);
         break;
@@ -415,6 +423,7 @@ const App = {
     invites: '邀请记录',
     logs: '检查日志',
     'cdk-manage': 'CDK 管理',
+    'account-delivery': '账号交付',
     'member-cleanup': '成员清理',
     'untracked-members': '没有记录来源',
     'checkout-tools': '结账工具',
@@ -4239,6 +4248,344 @@ const App = {
     }
   },
 
+  accountDeliveryStatusLabel(status) {
+    const labels = {
+      available: '未售',
+      reserved: '锁定中',
+      sold: '已售',
+      pending: '待支付',
+      delivered: '已交付',
+      failed: '失败',
+      paid: '已支付',
+    };
+    return labels[status] || status || '-';
+  },
+
+  accountDeliveryStatusTone(status) {
+    const tones = {
+      available: 'success',
+      reserved: 'warning',
+      sold: 'accent',
+      pending: 'warning',
+      delivered: 'success',
+      paid: 'accent',
+      failed: 'danger',
+    };
+    return tones[status] || 'neutral';
+  },
+
+  getAccountDeliveryFilters() {
+    return {
+      search: document.getElementById('account-delivery-search-input')?.value.trim() || '',
+      status: document.getElementById('account-delivery-status-filter')?.value || 'all',
+    };
+  },
+
+  renderAccountDeliveryPagination(containerId, data, type) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const total = Number(data?.total || 0);
+    const limit = Number(data?.limit || this.cdkPageLimit || 10);
+    const currentPage = Math.max(1, Number(data?.page || 1));
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    if (total === 0) {
+      container.innerHTML = '';
+      return;
+    }
+
+    const meta = `<span class="pagination-meta">第 ${currentPage} / ${totalPages} 页 · 共 ${total} 条</span>`;
+    if (totalPages <= 1) {
+      container.innerHTML = meta;
+      return;
+    }
+
+    const buttons = [];
+    buttons.push(`<button ${currentPage <= 1 ? 'disabled' : ''} onclick="App.goToAccountDeliveryPage('${type}', ${currentPage - 1})">&lt;</button>`);
+    for (let i = 1; i <= totalPages; i += 1) {
+      if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+        buttons.push(`<button class="page-btn ${i === currentPage ? 'active' : ''}" ${i === currentPage ? '' : `onclick="App.goToAccountDeliveryPage('${type}', ${i})"`}>${i}</button>`);
+      } else if (i === currentPage - 3 || i === currentPage + 3) {
+        buttons.push('<span class="page-dots">...</span>');
+      }
+    }
+    buttons.push(`<button ${currentPage >= totalPages ? 'disabled' : ''} onclick="App.goToAccountDeliveryPage('${type}', ${currentPage + 1})">&gt;</button>`);
+    container.innerHTML = `${meta}${buttons.join('')}`;
+  },
+
+  goToAccountDeliveryPage(type, page) {
+    const safePage = Math.max(1, parseInt(page, 10) || 1);
+    if (type === 'items') {
+      this.currentAccountDeliveryItemsPage = safePage;
+    } else if (type === 'orders') {
+      this.currentAccountDeliveryOrdersPage = safePage;
+    }
+    this.loadAccountDeliveryPage();
+  },
+
+  async loadAccountDeliveryPage(options = {}) {
+    if (options.resetPages) {
+      this.currentAccountDeliveryItemsPage = 1;
+      this.currentAccountDeliveryOrdersPage = 1;
+    }
+
+    const filters = this.getAccountDeliveryFilters();
+    const itemsPage = Math.max(1, parseInt(options.itemsPage || this.currentAccountDeliveryItemsPage || 1, 10));
+    const ordersPage = Math.max(1, parseInt(options.ordersPage || this.currentAccountDeliveryOrdersPage || 1, 10));
+    const limit = this.cdkPageLimit;
+    this.currentAccountDeliveryItemsPage = itemsPage;
+    this.currentAccountDeliveryOrdersPage = ordersPage;
+
+    const requestKey = `account-delivery-page:${JSON.stringify({ filters, itemsPage, ordersPage, limit })}`;
+    return this.runSingleFlight(requestKey, async () => {
+      try {
+        const [product, items, orders] = await Promise.all([
+          API.getAccountDeliveryProduct(),
+          API.getAccountDeliveryItems({ ...filters, page: itemsPage, limit }),
+          API.getAccountDeliveryOrders({ page: ordersPage, limit }),
+        ]);
+
+        this.accountDeliveryProductData = product || null;
+        this.accountDeliveryItemsData = items || { items: [], summary: {} };
+        this.accountDeliveryOrdersData = orders || { orders: [], summary: {} };
+        this.renderAccountDeliveryPage();
+      } catch (err) {
+        console.error('Failed to load account delivery page:', err);
+        this.toast(`账号交付加载失败: ${err.message}`, 'error');
+      }
+    });
+  },
+
+  renderAccountDeliveryPage() {
+    this.renderAccountDeliverySummary();
+    this.renderAccountDeliveryItems();
+    this.renderAccountDeliveryOrders();
+  },
+
+  renderAccountDeliverySummary() {
+    const host = document.getElementById('account-delivery-summary');
+    const product = this.accountDeliveryProductData || {};
+    const summary = this.accountDeliveryItemsData?.summary || product || {};
+    if (host) {
+      host.innerHTML = [
+        Components.workspaceSummaryCard('库存总数', summary.totalCount || 0, 'neutral', '后台已录入的账号邮箱'),
+        Components.workspaceSummaryCard('未售', summary.stockCount || 0, (summary.stockCount || 0) > 0 ? 'success' : 'neutral', '客户可购买的账号'),
+        Components.workspaceSummaryCard('锁定中', summary.reservedCount || 0, (summary.reservedCount || 0) > 0 ? 'warning' : 'neutral', '已下单但未付款完成'),
+        Components.workspaceSummaryCard('已售', summary.soldCount || 0, (summary.soldCount || 0) > 0 ? 'accent' : 'neutral', '已付款并交付的账号'),
+      ].join('');
+    }
+
+    const priceInput = document.getElementById('account-delivery-price-yuan');
+    const priceNote = document.getElementById('account-delivery-price-note');
+    const cents = Number(product.amountCents || 0);
+    if (priceInput && cents > 0 && document.activeElement !== priceInput) {
+      priceInput.value = (cents / 100).toFixed(2);
+    }
+    if (priceNote) {
+      priceNote.textContent = product.amountText ? `当前购买页金额：${product.amountText}` : '当前金额加载中...';
+    }
+  },
+
+  renderAccountDeliveryItems() {
+    const table = document.getElementById('account-delivery-items-table');
+    const tbody = document.getElementById('account-delivery-items-tbody');
+    const empty = document.getElementById('account-delivery-items-empty');
+    const items = Array.isArray(this.accountDeliveryItemsData?.items) ? this.accountDeliveryItemsData.items : [];
+    if (!table || !tbody || !empty) return;
+
+    this.renderAccountDeliveryPagination('account-delivery-items-pagination', this.accountDeliveryItemsData, 'items');
+
+    if (items.length === 0) {
+      table.classList.add('hidden');
+      empty.classList.remove('hidden');
+      tbody.innerHTML = '';
+      return;
+    }
+
+    table.classList.remove('hidden');
+    empty.classList.add('hidden');
+    tbody.innerHTML = items.map(item => {
+      const orderNo = item.sold_order_no || item.reserved_order_no || '';
+      return `
+        <tr>
+          <td>
+            <div class="stack-col-sm">
+              <code>${Components.escapeHtml(item.email || '')}</code>
+              <button class="member-inline-btn" onclick="App.copyText(${Components.jsString(item.email || '')})">复制</button>
+            </div>
+          </td>
+          <td>${this.cdkPill(this.accountDeliveryStatusLabel(item.status), this.accountDeliveryStatusTone(item.status))}</td>
+          <td>
+            <div class="stack-col-sm">
+              <span>${Components.escapeHtml(item.buyer_email || '-')}</span>
+              ${orderNo ? `<code>${Components.escapeHtml(orderNo)}</code>` : ''}
+              ${item.reserved_until ? `<span class="text-muted text-xs">锁定到 ${Components.escapeHtml(Components.formatDateTime(item.reserved_until))}</span>` : ''}
+            </div>
+          </td>
+          <td>
+            <div class="stack-col-sm">
+              <span>${Components.timeAgo(item.updated_at || item.created_at)}</span>
+              <span class="text-muted text-xs">${Components.escapeHtml(Components.formatDateTime(item.updated_at || item.created_at))}</span>
+            </div>
+          </td>
+          <td>
+            <div class="action-btns">
+              <button class="action-btn danger" title="删除" onclick="App.deleteAccountDeliveryItem(${item.id})">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  },
+
+  renderAccountDeliveryOrders() {
+    const table = document.getElementById('account-delivery-orders-table');
+    const tbody = document.getElementById('account-delivery-orders-tbody');
+    const empty = document.getElementById('account-delivery-orders-empty');
+    const orders = Array.isArray(this.accountDeliveryOrdersData?.orders) ? this.accountDeliveryOrdersData.orders : [];
+    if (!table || !tbody || !empty) return;
+
+    this.renderAccountDeliveryPagination('account-delivery-orders-pagination', this.accountDeliveryOrdersData, 'orders');
+
+    if (orders.length === 0) {
+      table.classList.add('hidden');
+      empty.classList.remove('hidden');
+      tbody.innerHTML = '';
+      return;
+    }
+
+    table.classList.remove('hidden');
+    empty.classList.add('hidden');
+    tbody.innerHTML = orders.map(order => `
+      <tr>
+        <td><code>${Components.escapeHtml(order.orderNo || '')}</code></td>
+        <td>${Components.escapeHtml(order.buyerEmail || '')}</td>
+        <td>${this.cdkPill(this.accountDeliveryStatusLabel(order.status), this.accountDeliveryStatusTone(order.status))}</td>
+        <td>
+          <div class="stack-col-sm">
+            <span>${Components.escapeHtml(order.amountText || '')}</span>
+            ${order.paidAmountText ? `<span class="text-muted text-xs">实收: ${Components.escapeHtml(order.paidAmountText)}</span>` : ''}
+            ${order.matchStatus ? `<span class="text-muted text-xs">匹配: ${Components.escapeHtml(order.matchStatus)}</span>` : ''}
+          </div>
+        </td>
+        <td>
+          <div class="stack-col-sm">
+            <code>${Components.escapeHtml(order.accountEmail || '-')}</code>
+            ${order.accountEmail ? `<button class="member-inline-btn" onclick="App.copyText(${Components.jsString(order.accountEmail)})">复制</button>` : ''}
+          </div>
+        </td>
+        <td>
+          <div class="stack-col-sm">
+            <span>${Components.timeAgo(order.updatedAt || order.createdAt)}</span>
+            <span class="text-muted text-xs">${Components.escapeHtml(Components.formatDateTime(order.updatedAt || order.createdAt))}</span>
+          </div>
+        </td>
+        <td>
+          <div class="action-btns">
+            ${order.status === 'pending' && order.paymentMethod === 'alipay' ? `
+              <button class="action-btn tone-green" title="确认收款并交付账号" onclick="App.manualDeliverAccountDeliveryOrder(${Components.jsString(order.orderNo || '')})">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              </button>
+            ` : ''}
+            ${order.accountEmail ? `
+              <button class="action-btn tone-blue" title="复制交付邮箱" onclick="App.copyText(${Components.jsString(order.accountEmail || '')})">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            ` : ''}
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  },
+
+  async addAccountDeliveryItems() {
+    const input = document.getElementById('account-delivery-emails');
+    const resultHost = document.getElementById('account-delivery-add-result');
+    const emails = input?.value || '';
+    if (!emails.trim()) {
+      this.toast('请输入要添加的邮箱', 'warning');
+      input?.focus();
+      return;
+    }
+
+    try {
+      const result = await API.addAccountDeliveryItems(emails);
+      if (resultHost) {
+        resultHost.innerHTML = `
+          <div class="dashboard-alert-item success">
+            <div class="dashboard-alert-head"><strong>${Components.escapeHtml(result.message || '添加成功')}</strong></div>
+            <div class="dashboard-alert-detail">新库存会立即出现在购买页。</div>
+          </div>
+        `;
+      }
+      if (input) input.value = '';
+      await this.loadAccountDeliveryPage({ resetPages: true });
+      this.toast(result.message || '账号库存已添加', 'success');
+    } catch (err) {
+      this.toast(`添加账号库存失败: ${err.message}`, 'error');
+    }
+  },
+
+  async deleteAccountDeliveryItem(id) {
+    if (!confirm('确定删除这个账号库存吗？已售订单仍会保留交付记录。')) {
+      return;
+    }
+
+    try {
+      await API.deleteAccountDeliveryItem(id);
+      await this.loadAccountDeliveryPage();
+      this.toast('账号库存已删除', 'success');
+    } catch (err) {
+      this.toast(`删除账号库存失败: ${err.message}`, 'error');
+    }
+  },
+
+  async manualDeliverAccountDeliveryOrder(orderNo) {
+    if (!orderNo) return;
+    if (!confirm(`确认已经收到这笔账号订单的款项吗？\n\n订单：${orderNo}\n\n确认后系统会交付一个未售邮箱，并把它标记为已售。`)) {
+      return;
+    }
+
+    try {
+      const result = await API.manualDeliverAccountDeliveryOrder(orderNo);
+      await this.loadAccountDeliveryPage();
+      const email = result?.order?.accountEmail || '';
+      this.toast(email ? `已交付账号: ${email}` : '已交付账号', 'success');
+      if (email) {
+        await this.copyText(email);
+      }
+    } catch (err) {
+      this.toast(`确认收款失败: ${err.message}`, 'error');
+    }
+  },
+
+  async saveAccountDeliveryPriceSetting() {
+    const input = document.getElementById('account-delivery-price-yuan');
+    const value = Number(input?.value || 0);
+    if (!Number.isFinite(value) || value <= 0) {
+      this.toast('请输入正确的账号金额', 'warning');
+      input?.focus();
+      return;
+    }
+
+    const cents = Math.round(value * 100);
+    try {
+      const settings = await API.updateSettings({ account_delivery_price_cents: String(cents) });
+      this.toast('账号交付金额已保存', 'success');
+      this.accountDeliveryProductData = {
+        ...(this.accountDeliveryProductData || {}),
+        amountCents: Number(settings.account_delivery_price_cents || cents),
+        amountText: `${(Number(settings.account_delivery_price_cents || cents) / 100).toFixed(2)} CNY`,
+      };
+      await this.loadAccountDeliveryPage();
+    } catch (err) {
+      this.toast(`保存账号金额失败: ${err.message}`, 'error');
+    }
+  },
+
   // ===== VPS Monitor =====
   updateSystemMonitorPolling(page) {
     if (page === 'system-monitor') {
@@ -5055,6 +5402,51 @@ const App = {
         if (e.key === 'Enter') {
           this.traceCdk();
         }
+      });
+    }
+
+    const btnAccountDeliveryAdd = document.getElementById('btn-account-delivery-add');
+    if (btnAccountDeliveryAdd) {
+      btnAccountDeliveryAdd.addEventListener('click', () => {
+        this.addAccountDeliveryItems();
+      });
+    }
+
+    const btnAccountDeliveryClear = document.getElementById('btn-account-delivery-clear');
+    if (btnAccountDeliveryClear) {
+      btnAccountDeliveryClear.addEventListener('click', () => {
+        const input = document.getElementById('account-delivery-emails');
+        if (input) input.value = '';
+      });
+    }
+
+    const btnSaveAccountDeliveryPrice = document.getElementById('btn-save-account-delivery-price');
+    if (btnSaveAccountDeliveryPrice) {
+      btnSaveAccountDeliveryPrice.addEventListener('click', () => {
+        this.saveAccountDeliveryPriceSetting();
+      });
+    }
+
+    const btnRefreshAccountDelivery = document.getElementById('btn-refresh-account-delivery');
+    if (btnRefreshAccountDelivery) {
+      btnRefreshAccountDelivery.addEventListener('click', () => {
+        this.loadAccountDeliveryPage();
+      });
+    }
+
+    const accountDeliveryStatusFilter = document.getElementById('account-delivery-status-filter');
+    if (accountDeliveryStatusFilter) {
+      accountDeliveryStatusFilter.addEventListener('change', () => {
+        this.loadAccountDeliveryPage({ resetPages: true });
+      });
+    }
+
+    const accountDeliverySearchInput = document.getElementById('account-delivery-search-input');
+    if (accountDeliverySearchInput) {
+      let timeout = null;
+      accountDeliverySearchInput.addEventListener('input', () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => this.loadAccountDeliveryPage({ resetPages: true }), 300);
       });
     }
 

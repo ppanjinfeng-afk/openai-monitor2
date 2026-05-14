@@ -187,6 +187,43 @@ db.exec(`
     FOREIGN KEY (cdk_id) REFERENCES cdk_cards(id)
   );
 
+  CREATE TABLE IF NOT EXISTS account_delivery_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    status TEXT DEFAULT 'available',
+    buyer_email TEXT DEFAULT '',
+    sold_order_no TEXT DEFAULT '',
+    reserved_order_no TEXT DEFAULT '',
+    reserved_until TEXT,
+    sold_at TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS account_delivery_orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_no TEXT NOT NULL UNIQUE,
+    buyer_email TEXT NOT NULL,
+    payment_method TEXT DEFAULT 'alipay',
+    amount_cents INTEGER NOT NULL,
+    currency TEXT DEFAULT 'CNY',
+    status TEXT DEFAULT 'pending',
+    account_item_id INTEGER,
+    account_email TEXT DEFAULT '',
+    provider_order_id TEXT DEFAULT '',
+    provider_trade_no TEXT DEFAULT '',
+    pay_url TEXT DEFAULT '',
+    public_token TEXT DEFAULT '',
+    paid_amount_cents INTEGER DEFAULT 0,
+    payer_name TEXT DEFAULT '',
+    match_status TEXT DEFAULT '',
+    receipt_raw TEXT DEFAULT '',
+    paid_at TEXT,
+    delivered_at TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+
   CREATE TABLE IF NOT EXISTS checkout_tools_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     tool_type TEXT DEFAULT '',
@@ -312,6 +349,13 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_cdk_orders_status ON cdk_orders(status);
   CREATE INDEX IF NOT EXISTS idx_cdk_orders_buyer_email ON cdk_orders(buyer_email);
   CREATE INDEX IF NOT EXISTS idx_cdk_orders_amount_status ON cdk_orders(amount_cents, status, created_at);
+  CREATE INDEX IF NOT EXISTS idx_account_delivery_items_email ON account_delivery_items(email);
+  CREATE INDEX IF NOT EXISTS idx_account_delivery_items_status ON account_delivery_items(status);
+  CREATE INDEX IF NOT EXISTS idx_account_delivery_items_order ON account_delivery_items(sold_order_no, reserved_order_no);
+  CREATE INDEX IF NOT EXISTS idx_account_delivery_orders_order_no ON account_delivery_orders(order_no);
+  CREATE INDEX IF NOT EXISTS idx_account_delivery_orders_public_token ON account_delivery_orders(public_token);
+  CREATE INDEX IF NOT EXISTS idx_account_delivery_orders_status ON account_delivery_orders(status);
+  CREATE INDEX IF NOT EXISTS idx_account_delivery_orders_buyer_email ON account_delivery_orders(buyer_email);
 `);
 
 db.prepare(`
@@ -352,6 +396,7 @@ const defaultSettings = [
   ['public_business_daily_url', 'https://xn--2team-cd2h.com'],
   ['public_business_two_seat_url', 'https://business.xn--2team-cd2h.com/'],
   ['cdk_team_price_cents', String(Number.parseInt(process.env.CDK_TEAM_PRICE_CENTS || '200', 10) || 200)],
+  ['account_delivery_price_cents', String(Number.parseInt(process.env.ACCOUNT_DELIVERY_PRICE_CENTS || '500', 10) || 500)],
   ['untracked_members_auto_kick_enabled', 'false'],
   ['stale_members_auto_kick_enabled', 'false'],
   ['stale_members_auto_kick_hours', '26'],

@@ -346,6 +346,41 @@ const API = {
     });
   },
 
+  // Account delivery
+  getAccountDeliveryProduct() {
+    return this.request('/api/account-delivery/product');
+  },
+
+  getAccountDeliveryItems(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return this.request(`/api/account-delivery/items${qs ? `?${qs}` : ''}`);
+  },
+
+  addAccountDeliveryItems(emails) {
+    return this.request('/api/account-delivery/items', {
+      method: 'POST',
+      body: JSON.stringify({ emails }),
+    });
+  },
+
+  deleteAccountDeliveryItem(id) {
+    return this.request(`/api/account-delivery/items/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  getAccountDeliveryOrders(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return this.request(`/api/account-delivery/orders${qs ? `?${qs}` : ''}`);
+  },
+
+  manualDeliverAccountDeliveryOrder(orderNo, data = {}) {
+    return this.request(`/api/account-delivery/orders/${encodeURIComponent(orderNo)}/manual-deliver`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   // Checks
   runCheckAll() {
     return this.request('/api/checks/run', { method: 'POST' });

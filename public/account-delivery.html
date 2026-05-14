@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GPT Business 2人席位账号</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --bg: #eef5f8;
+      --ink: #102235;
+      --muted: #5b6b7d;
+      --line: #d8e3eb;
+      --panel: #ffffff;
+      --blue: #2563eb;
+      --blue-dark: #1d4ed8;
+      --cyan: #16c7c7;
+      --green: #0f9f6e;
+      --red: #bd2b2b;
+      --amber: #a76510;
+      --shadow: 0 24px 70px rgba(21, 42, 66, 0.12);
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        linear-gradient(135deg, rgba(22, 199, 199, 0.16), transparent 34%),
+        linear-gradient(180deg, #f5f9fd 0, var(--bg) 100%);
+      font-family: Inter, "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+    }
+
+    .topbar {
+      max-width: 1120px;
+      min-height: 74px;
+      margin: 0 auto;
+      padding: 0 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: inherit;
+      text-decoration: none;
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: #ffffff;
+      background: #112437;
+      box-shadow: 0 12px 26px rgba(17, 36, 55, 0.18);
+    }
+
+    .top-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+      padding: 0 12px;
+      border: 1px solid #c9dcff;
+      border-radius: 8px;
+      color: #1d4ed8;
+      background: rgba(255,255,255,0.72);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .wrap {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 18px 22px 54px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(360px, 0.92fr) minmax(0, 1.08fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .product {
+      position: sticky;
+      top: 18px;
+      min-height: 560px;
+      border-radius: 8px;
+      overflow: hidden;
+      padding: 30px;
+      color: #ffffff;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(255,255,255,0.06) 1px, transparent 1px),
+        linear-gradient(150deg, #112437, #183c4e);
+      background-size: 42px 42px, 42px 42px, auto;
+      box-shadow: 0 22px 58px rgba(14, 28, 48, 0.22);
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 10px;
+      border: 1px solid rgba(255,255,255,0.22);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.84);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    h1 {
+      margin: 26px 0 12px;
+      max-width: 520px;
+      font-size: 40px;
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    .product p {
+      margin: 0;
+      max-width: 560px;
+      color: rgba(255,255,255,0.76);
+      font-size: 16px;
+      line-height: 1.75;
+    }
+
+    .price {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 28px;
+      padding: 18px 0;
+      border-top: 1px solid rgba(255,255,255,0.14);
+      border-bottom: 1px solid rgba(255,255,255,0.14);
+    }
+
+    .price strong {
+      font-size: 46px;
+      line-height: 1;
+    }
+
+    .price span {
+      color: rgba(255,255,255,0.72);
+      font-weight: 800;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .stat {
+      min-height: 86px;
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 8px;
+      padding: 12px;
+      background: rgba(255,255,255,0.08);
+    }
+
+    .stat span {
+      display: block;
+      margin-bottom: 8px;
+      color: rgba(255,255,255,0.68);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .stat strong {
+      font-size: 32px;
+      line-height: 1;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 30px;
+    }
+
+    .flow div {
+      min-height: 84px;
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 8px;
+      padding: 12px;
+      background: rgba(255,255,255,0.07);
+    }
+
+    .flow b {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+
+    .flow span {
+      color: rgba(255,255,255,0.66);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .panel {
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.96);
+      box-shadow: var(--shadow);
+      padding: 28px;
+    }
+
+    .panel h2 {
+      margin: 0 0 18px;
+      font-size: 24px;
+      letter-spacing: 0;
+    }
+
+    .field {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #24364b;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    input {
+      width: 100%;
+      height: 48px;
+      border: 1px solid #cfd9e7;
+      border-radius: 8px;
+      padding: 0 14px;
+      color: var(--ink);
+      background: #fbfcff;
+      font: inherit;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .method-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .method {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 48px;
+      border: 1px solid #cfd9e7;
+      border-radius: 8px;
+      background: #fbfcff;
+      color: #263754;
+      cursor: pointer;
+      font-weight: 900;
+      user-select: none;
+    }
+
+    .method input { display: none; }
+    .method:has(input:checked) {
+      border-color: var(--blue);
+      background: #eaf1ff;
+      color: #1f55b7;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    button, .button-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      border: 0;
+      border-radius: 8px;
+      padding: 0 16px;
+      font: inherit;
+      font-weight: 900;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .primary {
+      color: #ffffff;
+      background: var(--blue);
+    }
+
+    .primary:hover { background: var(--blue-dark); }
+
+    .secondary {
+      color: #214066;
+      background: #edf4fb;
+      border: 1px solid #d6e0ee;
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .notice {
+      display: none;
+      margin-top: 14px;
+      border-left: 3px solid var(--amber);
+      border-radius: 6px;
+      background: #fff8e8;
+      color: #694a00;
+      padding: 10px 12px;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .notice.show { display: block; }
+
+    .status,
+    .account-box,
+    .qr-box {
+      display: none;
+      margin-top: 20px;
+      border: 1px solid #e3e8f1;
+      border-radius: 8px;
+      background: #fbfcff;
+      padding: 16px;
+    }
+
+    .status.show,
+    .account-box.show,
+    .qr-box.show { display: block; }
+
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 8px 0;
+      border-bottom: 1px solid #edf1f7;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .status-row:last-child { border-bottom: 0; }
+    .status-row strong {
+      color: var(--ink);
+      text-align: right;
+      overflow-wrap: anywhere;
+    }
+
+    .account-box {
+      border-color: #a7e4c5;
+      background: #ecfdf4;
+    }
+
+    .account-value {
+      display: block;
+      margin-top: 10px;
+      padding: 14px;
+      border: 1px solid #bfead1;
+      border-radius: 8px;
+      background: #ffffff;
+      color: #075e39;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 18px;
+      font-weight: 900;
+      overflow-wrap: anywhere;
+    }
+
+    .qr-layout {
+      display: grid;
+      grid-template-columns: 180px minmax(0, 1fr);
+      gap: 16px;
+      align-items: center;
+    }
+
+    .qr-layout img {
+      width: 180px;
+      height: 180px;
+      object-fit: contain;
+      border: 1px solid #d6e0ee;
+      border-radius: 8px;
+      background: #ffffff;
+    }
+
+    .lookup {
+      margin-top: 24px;
+      padding-top: 22px;
+      border-top: 1px solid #e3e8f1;
+    }
+
+    .lookup-result {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .lookup-item {
+      border: 1px solid #d6e0ee;
+      border-radius: 8px;
+      background: #fbfcff;
+      padding: 12px;
+    }
+
+    .lookup-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+      font-weight: 900;
+    }
+
+    .lookup-item small {
+      display: block;
+      color: var(--muted);
+      line-height: 1.8;
+      overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 880px) {
+      .layout { grid-template-columns: 1fr; }
+      .product { position: static; min-height: auto; }
+      h1 { font-size: 32px; }
+      .flow { grid-template-columns: 1fr; }
+      .method-grid { grid-template-columns: 1fr; }
+      .qr-layout { grid-template-columns: 1fr; }
+      .qr-layout img {
+        width: min(100%, 260px);
+        height: auto;
+        justify-self: center;
+      }
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+        justify-content: center;
+        padding-top: 14px;
+        padding-bottom: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="GPT Business 2人席位账号">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h10"/><path d="M7 13h6"/></svg>
+      </span>
+      <span>GPT Business 2人席位账号</span>
+    </a>
+    <a class="top-link" href="https://t.me/ZC_PJF" target="_blank" rel="noopener">TG 联系</a>
+  </header>
+
+  <main class="wrap">
+    <section class="layout">
+      <aside class="product">
+        <div>
+          <div class="badge-row">
+            <span class="badge">账号自动交付</span>
+            <span class="badge">库存售完即止</span>
+            <span class="badge">一单一个邮箱</span>
+          </div>
+          <h1>购买 GPT Business 2人席位账号</h1>
+          <p>提交订单后打开支付页面，付款确认后系统会自动显示交付邮箱。已售邮箱会从库存中锁定，不会重复卖给其他客户。</p>
+          <div class="price">
+            <strong id="price-text">--</strong>
+            <span>每个账号</span>
+          </div>
+          <div class="stats" aria-label="库存">
+            <div class="stat"><span>已售</span><strong id="sold-count">--</strong></div>
+            <div class="stat"><span>库存</span><strong id="stock-count">--</strong></div>
+          </div>
+        </div>
+        <div class="flow">
+          <div><b>1. 下单支付</b><span>填写接收邮箱并创建订单。</span></div>
+          <div><b>2. 自动确认</b><span>付款回调后立即锁定已售。</span></div>
+          <div><b>3. 显示账号</b><span>页面自动显示交付邮箱。</span></div>
+        </div>
+      </aside>
+
+      <section class="panel">
+        <h2>创建订单</h2>
+        <form id="order-form" novalidate>
+          <div class="field">
+            <label for="buyer-email">接收邮箱</label>
+            <input id="buyer-email" type="text" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="name@example.com" required>
+          </div>
+          <div class="field">
+            <label>支付方式</label>
+            <div class="method-grid">
+              <label class="method">
+                <input type="radio" name="payment_method" value="alipay" checked>
+                支付宝扫码
+              </label>
+              <label class="method" id="mock-method" style="display:none">
+                <input type="radio" name="payment_method" value="mock">
+                本地测试
+              </label>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="primary" type="submit" id="btn-create">提交订单</button>
+          </div>
+        </form>
+
+        <div class="notice" id="notice"></div>
+
+        <div class="status" id="order-status">
+          <div class="status-row"><span>订单号</span><strong id="status-order">--</strong></div>
+          <div class="status-row"><span>金额</span><strong id="status-amount">--</strong></div>
+          <div class="status-row"><span>状态</span><strong id="status-state">--</strong></div>
+          <div class="actions" id="pay-actions"></div>
+        </div>
+
+        <div class="qr-box" id="qr-box">
+          <div class="qr-layout">
+            <img id="pay-qr" src="" alt="支付宝收款二维码">
+            <div>
+              <strong>扫码支付</strong>
+              <p>付款后请等待页面自动刷新；如果长时间没有交付，请联系上方售后。</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="account-box" id="account-box">
+          <strong>账号已交付</strong>
+          <code class="account-value" id="account-email">--</code>
+          <div class="actions">
+            <button class="secondary" type="button" id="btn-copy">复制邮箱</button>
+          </div>
+        </div>
+
+        <div class="lookup">
+          <h2>订单找回</h2>
+          <div class="field">
+            <label for="lookup-email">下单邮箱</label>
+            <input id="lookup-email" type="text" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="name@example.com">
+          </div>
+          <div class="actions">
+            <button class="secondary" type="button" id="btn-lookup">查询订单</button>
+          </div>
+          <div class="lookup-result" id="lookup-result"></div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const productPrice = document.getElementById('price-text');
+    const soldCount = document.getElementById('sold-count');
+    const stockCount = document.getElementById('stock-count');
+    const form = document.getElementById('order-form');
+    const notice = document.getElementById('notice');
+    const statusBox = document.getElementById('order-status');
+    const payActions = document.getElementById('pay-actions');
+    const qrBox = document.getElementById('qr-box');
+    const payQr = document.getElementById('pay-qr');
+    const accountBox = document.getElementById('account-box');
+    const accountEmailEl = document.getElementById('account-email');
+    const copyBtn = document.getElementById('btn-copy');
+    const buyerEmailInput = document.getElementById('buyer-email');
+    const lookupEmail = document.getElementById('lookup-email');
+    const lookupBtn = document.getElementById('btn-lookup');
+    const lookupResult = document.getElementById('lookup-result');
+    const mockMethod = document.getElementById('mock-method');
+    const createBtn = document.getElementById('btn-create');
+    const urlParams = new URLSearchParams(window.location.search);
+    let availableStockCount = 0;
+    let currentOrderNo = '';
+    let currentOrderToken = '';
+    let pollTimer = null;
+
+    function normalizeEmailInput(value) {
+      return String(value || '')
+        .trim()
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .replace(/\u3000/g, ' ')
+        .replace(/[\uFF20\uFE6B]/g, '@')
+        .replace(/[\u3002\uFF0E\uFF61\uFE52]/g, '.')
+        .replace(/\s+/g, '')
+        .toLowerCase();
+    }
+
+    function isValidEmailInput(value) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmailInput(value));
+    }
+
+    function syncNormalizedEmailInput(input) {
+      if (!input) return '';
+      const normalized = normalizeEmailInput(input.value);
+      if (normalized !== input.value) input.value = normalized;
+      return normalized;
+    }
+
+    function showNotice(text) {
+      notice.textContent = text;
+      notice.classList.toggle('show', Boolean(text));
+    }
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      }[char]));
+    }
+
+    async function request(url, options = {}) {
+      const res = await fetch(url, {
+        ...options,
+        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      return data;
+    }
+
+    function getMethod() {
+      return document.querySelector('input[name="payment_method"]:checked').value;
+    }
+
+    function getStatusText(order) {
+      const labels = {
+        pending: '待支付',
+        paid: '已支付',
+        delivered: '已交付',
+        failed: '失败',
+      };
+      return labels[order?.status] || order?.status || '--';
+    }
+
+    function isMobilePaymentBrowser() {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|HarmonyOS|MicroMessenger/i.test(navigator.userAgent || '');
+    }
+
+    function openPendingPaymentWindow() {
+      const paymentWindow = isMobilePaymentBrowser()
+        ? window.open('about:blank', '_blank')
+        : window.open('', '_blank', 'width=520,height=760');
+      if (!paymentWindow) return null;
+      try {
+        paymentWindow.document.write('<!doctype html><meta charset="utf-8"><title>正在打开支付页</title><body style="font:16px Microsoft YaHei,sans-serif;display:grid;place-items:center;min-height:100vh;background:#f4f8ff;color:#102235"><strong>订单已创建，正在打开支付页面...</strong></body>');
+        paymentWindow.document.close();
+      } catch (_) {}
+      return paymentWindow;
+    }
+
+    function openPayUrl(order, paymentWindow) {
+      if (!order?.payUrl || order.paymentMethod === 'mock') {
+        if (paymentWindow && !paymentWindow.closed) paymentWindow.close();
+        return false;
+      }
+      if (paymentWindow && !paymentWindow.closed) {
+        paymentWindow.location.replace(order.payUrl);
+        paymentWindow.focus();
+        return true;
+      }
+      if (isMobilePaymentBrowser()) {
+        window.location.assign(order.payUrl);
+        return true;
+      }
+      const fallback = window.open(order.payUrl, '_blank');
+      if (fallback) {
+        fallback.focus();
+        return true;
+      }
+      return false;
+    }
+
+    async function loadProduct() {
+      const data = await request('/api/account-delivery/product');
+      productPrice.textContent = data.amountText || '--';
+      soldCount.textContent = Number(data.soldCount || 0).toLocaleString('zh-CN');
+      stockCount.textContent = Number(data.stockCount || 0).toLocaleString('zh-CN');
+      availableStockCount = Number(data.stockCount || 0);
+      mockMethod.style.display = data.mockPayEnabled ? '' : 'none';
+      createBtn.disabled = availableStockCount <= 0;
+      createBtn.textContent = availableStockCount <= 0 ? '暂时无库存' : '提交订单';
+      showNotice(availableStockCount <= 0 ? '当前账号库存不足，请稍后再试。' : '');
+    }
+
+    function renderOrder(order) {
+      if (!order) return;
+      currentOrderNo = order.orderNo;
+      currentOrderToken = order.orderToken || currentOrderToken;
+      statusBox.classList.add('show');
+      document.getElementById('status-order').textContent = order.orderNo || '--';
+      document.getElementById('status-amount').textContent = order.amountText || '--';
+      document.getElementById('status-state').textContent = getStatusText(order);
+      payActions.innerHTML = '';
+      qrBox.classList.remove('show');
+
+      if (order.status === 'delivered' && order.accountEmail) {
+        accountEmailEl.textContent = order.accountEmail;
+        accountBox.classList.add('show');
+        stopPolling();
+        return;
+      }
+
+      accountBox.classList.remove('show');
+      if (order.status !== 'delivered') {
+        if (order.payUrl) {
+          const payButton = document.createElement('button');
+          payButton.type = 'button';
+          payButton.className = 'primary';
+          payButton.textContent = '打开支付页';
+          payButton.onclick = () => openPayUrl(order, null);
+          payActions.appendChild(payButton);
+        }
+        if (order.paymentMethod === 'mock') {
+          const mockButton = document.createElement('button');
+          mockButton.type = 'button';
+          mockButton.className = 'primary';
+          mockButton.textContent = '模拟付款';
+          mockButton.onclick = async () => {
+            const data = await request(`/api/account-delivery/orders/${encodeURIComponent(order.orderNo)}/mock-pay`, { method: 'POST' });
+            renderOrder(data.order);
+            await loadProduct().catch(() => {});
+          };
+          payActions.appendChild(mockButton);
+        }
+        if (order.payQrUrl) {
+          payQr.src = order.payQrUrl;
+          qrBox.classList.add('show');
+        }
+      }
+    }
+
+    function startPolling(orderNo) {
+      stopPolling();
+      pollTimer = setInterval(async () => {
+        try {
+          const qs = currentOrderToken ? `?token=${encodeURIComponent(currentOrderToken)}` : '';
+          const data = await request(`/api/account-delivery/status/${encodeURIComponent(orderNo)}${qs}`);
+          renderOrder(data.order);
+          if (data.order?.status === 'delivered') await loadProduct().catch(() => {});
+        } catch (_) {}
+      }, 3000);
+    }
+
+    function stopPolling() {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    }
+
+    async function loadOrderFromLocation() {
+      const orderNo = (urlParams.get('orderNo') || '').trim();
+      const token = (urlParams.get('token') || '').trim();
+      if (!orderNo || !token) return;
+      currentOrderToken = token;
+      const data = await request(`/api/account-delivery/orders/${encodeURIComponent(orderNo)}?token=${encodeURIComponent(token)}`);
+      renderOrder({ ...data.order, orderToken: token });
+      if (data.order && data.order.status !== 'delivered') startPolling(orderNo);
+      statusBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      const buyerEmail = syncNormalizedEmailInput(buyerEmailInput);
+      if (!isValidEmailInput(buyerEmail)) {
+        showNotice('请输入正确的接收邮箱。');
+        buyerEmailInput.focus();
+        return;
+      }
+      if (availableStockCount <= 0) {
+        showNotice('当前账号库存不足，请稍后再试。');
+        return;
+      }
+
+      const paymentMethod = getMethod();
+      const paymentWindow = paymentMethod !== 'mock' ? openPendingPaymentWindow() : null;
+      createBtn.disabled = true;
+      createBtn.textContent = '提交中...';
+      showNotice('');
+
+      try {
+        const data = await request('/api/account-delivery/orders', {
+          method: 'POST',
+          body: JSON.stringify({
+            buyer_email: buyerEmail,
+            payment_method: paymentMethod,
+          }),
+        });
+        renderOrder(data.order);
+        startPolling(data.order.orderNo);
+        lookupEmail.value = buyerEmail;
+        await loadProduct().catch(() => {});
+        if (!data.providerConfigured) {
+          if (paymentWindow && !paymentWindow.closed) paymentWindow.close();
+          showNotice(data.message || '订单已创建，请等待收款确认。');
+        } else if (data.order?.payUrl) {
+          const opened = openPayUrl(data.order, paymentWindow);
+          if (!opened) showNotice('浏览器拦截了支付弹窗，请点击下方“打开支付页”继续。');
+        } else if (paymentWindow && !paymentWindow.closed) {
+          paymentWindow.close();
+        }
+      } catch (err) {
+        if (paymentWindow && !paymentWindow.closed) paymentWindow.close();
+        showNotice(err.message);
+      } finally {
+        createBtn.disabled = availableStockCount <= 0;
+        createBtn.textContent = availableStockCount <= 0 ? '暂时无库存' : '提交订单';
+      }
+    });
+
+    copyBtn.addEventListener('click', async () => {
+      const email = accountEmailEl.textContent.trim();
+      if (!email) return;
+      await navigator.clipboard.writeText(email).catch(() => {});
+      copyBtn.textContent = '已复制';
+      setTimeout(() => { copyBtn.textContent = '复制邮箱'; }, 1400);
+    });
+
+    function renderLookupOrders(orders) {
+      if (!orders.length) {
+        lookupResult.innerHTML = '<div class="lookup-item"><small>没有查到这个邮箱的订单。</small></div>';
+        return;
+      }
+
+      lookupResult.innerHTML = orders.map(order => `
+        <div class="lookup-item">
+          <div class="lookup-head">
+            <span>${escapeHtml(getStatusText(order))}</span>
+            <button class="secondary" type="button" data-order-no="${escapeHtml(order.orderNo)}">查看</button>
+          </div>
+          <small>订单号：${escapeHtml(order.orderNo)}</small>
+          <small>金额：${escapeHtml(order.amountText)}</small>
+          <small>交付邮箱：${escapeHtml(order.accountEmail || '-')}</small>
+        </div>
+      `).join('');
+
+      lookupResult.querySelectorAll('button[data-order-no]').forEach(button => {
+        button.addEventListener('click', () => {
+          const order = orders.find(item => item.orderNo === button.dataset.orderNo);
+          if (!order) return;
+          currentOrderToken = order.orderToken || '';
+          renderOrder(order);
+          if (order.status !== 'delivered') startPolling(order.orderNo);
+          statusBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+      });
+    }
+
+    lookupBtn.addEventListener('click', async () => {
+      const email = syncNormalizedEmailInput(lookupEmail) || syncNormalizedEmailInput(buyerEmailInput);
+      if (!isValidEmailInput(email)) {
+        showNotice('请输入正确的下单邮箱。');
+        lookupEmail.focus();
+        return;
+      }
+
+      lookupBtn.disabled = true;
+      lookupBtn.textContent = '查询中...';
+      try {
+        const data = await request('/api/account-delivery/query-by-email', {
+          method: 'POST',
+          body: JSON.stringify({ buyer_email: email }),
+        });
+        renderLookupOrders(data.orders || []);
+      } catch (err) {
+        showNotice(err.message);
+      } finally {
+        lookupBtn.disabled = false;
+        lookupBtn.textContent = '查询订单';
+      }
+    });
+
+    [buyerEmailInput, lookupEmail].forEach(input => {
+      input.addEventListener('blur', () => syncNormalizedEmailInput(input));
+      input.addEventListener('change', () => syncNormalizedEmailInput(input));
+      input.addEventListener('paste', () => requestAnimationFrame(() => syncNormalizedEmailInput(input)));
+    });
+
+    loadProduct()
+      .catch(err => showNotice(err.message))
+      .finally(() => loadOrderFromLocation().catch(err => showNotice(err.message)));
+  </script>
+</body>
+</html>
