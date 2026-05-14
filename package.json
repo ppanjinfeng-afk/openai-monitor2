@@ -5,8 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "cdk:expire": "node scripts/expire-old-cdks.js"
+    "dev": "node server.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.7.0",

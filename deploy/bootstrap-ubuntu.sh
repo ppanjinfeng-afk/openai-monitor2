@@ -116,8 +116,8 @@ echo "[6/8] Installing systemd services..."
 cp "$APP_DIR/deploy/systemd/openai-monitor.service" /etc/systemd/system/openai-monitor.service
 cp "$APP_DIR/deploy/systemd/openai-monitor-healthcheck.service" /etc/systemd/system/openai-monitor-healthcheck.service
 cp "$APP_DIR/deploy/systemd/openai-monitor-healthcheck.timer" /etc/systemd/system/openai-monitor-healthcheck.timer
-cp "$APP_DIR/deploy/systemd/openai-monitor-cdk-expire.service" /etc/systemd/system/openai-monitor-cdk-expire.service
-cp "$APP_DIR/deploy/systemd/openai-monitor-cdk-expire.timer" /etc/systemd/system/openai-monitor-cdk-expire.timer
+systemctl disable --now openai-monitor-cdk-expire.timer openai-monitor-cdk-expire.service >/dev/null 2>&1 || true
+rm -f /etc/systemd/system/openai-monitor-cdk-expire.timer /etc/systemd/system/openai-monitor-cdk-expire.service
 chmod +x "$APP_DIR/deploy/scripts/openai-monitor-healthcheck.sh"
 mkdir -p /etc/systemd/system/openai-monitor.service.d
 {
@@ -146,7 +146,6 @@ systemctl reload nginx
 if [[ "$START_SERVICES" == "true" ]]; then
   systemctl enable --now openai-monitor
   systemctl enable --now openai-monitor-healthcheck.timer
-  systemctl enable --now openai-monitor-cdk-expire.timer
 fi
 
 echo "[8/8] Optional HTTPS..."
@@ -188,4 +187,3 @@ echo
 echo "Service status:"
 echo "   systemctl status openai-monitor --no-pager"
 echo "   systemctl status openai-monitor-healthcheck.timer --no-pager"
-echo "   systemctl status openai-monitor-cdk-expire.timer --no-pager"

@@ -100,8 +100,8 @@ npm ci --omit=dev
 sudo cp deploy/systemd/openai-monitor.service /etc/systemd/system/openai-monitor.service
 sudo cp deploy/systemd/openai-monitor-healthcheck.service /etc/systemd/system/openai-monitor-healthcheck.service
 sudo cp deploy/systemd/openai-monitor-healthcheck.timer /etc/systemd/system/openai-monitor-healthcheck.timer
-sudo cp deploy/systemd/openai-monitor-cdk-expire.service /etc/systemd/system/openai-monitor-cdk-expire.service
-sudo cp deploy/systemd/openai-monitor-cdk-expire.timer /etc/systemd/system/openai-monitor-cdk-expire.timer
+sudo systemctl disable --now openai-monitor-cdk-expire.timer openai-monitor-cdk-expire.service 2>/dev/null || true
+sudo rm -f /etc/systemd/system/openai-monitor-cdk-expire.timer /etc/systemd/system/openai-monitor-cdk-expire.service
 sudo cp deploy/nginx/openai-monitor.conf /etc/nginx/sites-available/openai-monitor.conf
 sudo mkdir -p /etc/systemd/system/openai-monitor.service.d
 printf '[Service]\nEnvironment=PUPPETEER_CACHE_DIR=/home/ubuntu/.cache/puppeteer\nEnvironment=PUBLIC_BASE_URL=https://xn--2team-cd2h.com\nEnvironment=CDK_TEAM_WORKER_CONCURRENCY=3\nEnvironment=BROWSER_TASK_CONCURRENCY=5\nEnvironment=BROWSER_MAINTENANCE_CONCURRENCY=2\nEnvironment=CDK_TEAM_INVITE_TIMEOUT_MS=300000\nEnvironment=OVERFLOW_REBALANCE_WORKSPACE_CONCURRENCY=2\nEnvironment=MEMBER_REMOVAL_WORKSPACE_CONCURRENCY=3\nEnvironment=MEMBER_REMOVAL_MEMBER_CONCURRENCY=6\nEnvironment=MEMBER_CLEANUP_SYNC_CONCURRENCY=3\n' | sudo tee /etc/systemd/system/openai-monitor.service.d/runtime.conf >/dev/null
@@ -171,6 +171,5 @@ https://activate.2人team.com/admin-login -> 404
 systemctl status openai-monitor --no-pager
 systemctl status nginx --no-pager
 systemctl status openai-monitor-healthcheck.timer --no-pager
-systemctl status openai-monitor-cdk-expire.timer --no-pager
 curl http://127.0.0.1:3000/api/checks/status
 ```
