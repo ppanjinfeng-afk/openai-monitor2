@@ -22,17 +22,19 @@ activate.2人team.com activate.xn--2team-cd2h.com
 admin.2人team.com    admin.xn--2team-cd2h.com
 ```
 
-在新 VPS 上运行这一条。以后开新服务器就按这个格式改域名、仓库和密码：
+在新 VPS 上运行这一段。以后开新服务器就按这个格式改域名和仓库，密码会在终端里输入：
 
 ```bash
+read -rsp "后台密码: " ADMIN_PASS; echo
 curl -fsSL https://raw.githubusercontent.com/ppanjinfeng-afk/openai-monitor2/main/deploy/bootstrap-ubuntu.sh \
   | sudo env \
       PUBLIC_TUNNEL_ENABLED=true \
       ADMIN_BASIC_AUTH_ENABLED=true \
       ADMIN_BASIC_AUTH_USER='派大星' \
-      ADMIN_BASIC_AUTH_PASS='CHANGE_THIS_ADMIN_PASSWORD' \
+      ADMIN_BASIC_AUTH_PASS="$ADMIN_PASS" \
       CERTBOT_DOMAINS='xn--2team-cd2h.com,www.xn--2team-cd2h.com,activate.xn--2team-cd2h.com,admin.xn--2team-cd2h.com' \
       bash -s -- https://github.com/ppanjinfeng-afk/openai-monitor2.git /opt/openai-monitor
+unset ADMIN_PASS
 ```
 
 如果某个子域名 DNS 还没加好，先从 `CERTBOT_DOMAINS` 里删掉那个域名，等 DNS 生效后再补签。例如后台域名：
@@ -103,19 +105,21 @@ sudo systemctl reload nginx
 在 VPS 上运行。中文用户名也支持：
 
 ```bash
+read -rsp "后台密码: " ADMIN_PASS; echo
 cd /opt/openai-monitor
 sudo env \
   ADMIN_BASIC_AUTH_ENABLED=true \
   ADMIN_BASIC_AUTH_USER='派大星' \
-  ADMIN_BASIC_AUTH_PASS='CHANGE_THIS_ADMIN_PASSWORD' \
+  ADMIN_BASIC_AUTH_PASS="$ADMIN_PASS" \
   node deploy/scripts/configure-admin-auth.js
+unset ADMIN_PASS
 sudo rm -f /etc/systemd/system/openai-monitor.service.d/admin-auth.conf
 sudo rm -f /etc/systemd/system/openai-monitor.service.d/zz-admin-auth.conf
 sudo systemctl daemon-reload
 sudo systemctl restart openai-monitor
 ```
 
-不要把真实后台密码提交到 GitHub。上面的 `CHANGE_THIS_ADMIN_PASSWORD` 在 VPS 上替换成真实密码即可。
+后台密码只在当前 VPS 终端输入，不写进 GitHub，也不会留在文档里。
 
 ## 5. 当前站点分工
 
