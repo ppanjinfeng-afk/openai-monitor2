@@ -10,6 +10,7 @@ Environment=NODE_ENV=production
 Environment=PORT=3000
 Environment=BIND_HOST=127.0.0.1
 Environment=PUBLIC_HOSTS=xn--2team-cd2h.com,www.xn--2team-cd2h.com
+Environment=PUPPETEER_CACHE_DIR=/home/ubuntu/.cache/puppeteer
 # For remote admin access on port 3000, change BIND_HOST to 0.0.0.0
 # and enable the basic auth credentials below.
 # Environment=ADMIN_BASIC_AUTH_ENABLED=true
