@@ -15,7 +15,7 @@ const PUBLIC_HOSTS = new Set(
     .filter(Boolean)
 );
 const BUSINESS_PUBLIC_HOSTS = new Set(
-  (process.env.BUSINESS_PUBLIC_HOSTS || 'business.xn--2team-cd2h.com')
+  (process.env.BUSINESS_PUBLIC_HOSTS || 'business.panqda.com')
     .split(',')
     .map(host => host.trim().toLowerCase())
     .filter(Boolean)

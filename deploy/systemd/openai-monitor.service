@@ -10,7 +10,7 @@ Environment=NODE_ENV=production
 Environment=PORT=3000
 Environment=BIND_HOST=127.0.0.1
 Environment=PUBLIC_HOSTS=xn--2team-cd2h.com,www.xn--2team-cd2h.com
-Environment=BUSINESS_PUBLIC_HOSTS=business.xn--2team-cd2h.com
+Environment=BUSINESS_PUBLIC_HOSTS=business.panqda.com
 Environment=ACTIVATION_ONLY_PUBLIC_HOSTS=activate.xn--2team-cd2h.com
 Environment=PUBLIC_BASE_URL=https://xn--2team-cd2h.com
 Environment=PUPPETEER_CACHE_DIR=/home/ubuntu/.cache/puppeteer
