@@ -615,6 +615,86 @@
         linear-gradient(180deg, #eef5ff 0, #f8fbff 290px, #f4f7fb 100%);
     }
 
+    body.purchase-confirm-open {
+      overflow: hidden;
+    }
+
+    .access-confirm {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(8, 17, 32, 0.68);
+      backdrop-filter: blur(8px);
+    }
+
+    .access-confirm.is-hidden {
+      display: none;
+    }
+
+    .access-confirm-card {
+      width: min(420px, 100%);
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      border-radius: 8px;
+      background: #ffffff;
+      box-shadow: 0 24px 80px rgba(8, 17, 32, 0.28);
+      padding: 28px;
+      text-align: center;
+    }
+
+    .access-confirm-card h2 {
+      margin: 0 0 18px;
+      color: #0f172a;
+      font-size: 26px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .access-confirm-list {
+      display: grid;
+      gap: 12px;
+      margin: 0 0 24px;
+    }
+
+    .access-confirm-list strong {
+      display: block;
+      border: 1px solid #d8e3ff;
+      border-radius: 8px;
+      background: #f4f8ff;
+      color: #12366b;
+      padding: 14px 16px;
+      font-size: 20px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    .access-confirm-button {
+      width: 100%;
+      min-height: 48px;
+      border: 0;
+      border-radius: 8px;
+      background: #2563eb;
+      color: #ffffff;
+      cursor: pointer;
+      font: inherit;
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: 0;
+      box-shadow: 0 14px 30px rgba(37, 99, 235, 0.28);
+      transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .access-confirm-button:hover,
+    .access-confirm-button:focus-visible {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+      box-shadow: 0 18px 34px rgba(37, 99, 235, 0.34);
+      outline: none;
+    }
+
     .topbar {
       max-width: 1180px;
       min-height: 76px;
@@ -1701,7 +1781,17 @@
     }
   </style>
 </head>
-<body>
+<body class="purchase-confirm-open">
+  <div class="access-confirm" id="access-confirm" role="dialog" aria-modal="true" aria-labelledby="access-confirm-title">
+    <div class="access-confirm-card">
+      <h2 id="access-confirm-title">购买前确认</h2>
+      <div class="access-confirm-list" aria-label="购买说明">
+        <strong>使用时间24小时</strong>
+        <strong>质保24小时</strong>
+      </div>
+      <button class="access-confirm-button" id="access-confirm-button" type="button">确认</button>
+    </div>
+  </div>
   <header class="topbar">
     <a class="brand" href="/buy" aria-label="Team CDK">
       <svg viewBox="0 0 48 48" fill="none" aria-hidden="true">
@@ -1886,6 +1976,8 @@
     const orderTotalAmount = document.getElementById('order-total-amount');
     const mockMethod = document.getElementById('mock-method');
     const createBtn = document.getElementById('btn-create');
+    const accessConfirm = document.getElementById('access-confirm');
+    const accessConfirmButton = document.getElementById('access-confirm-button');
     const batchResult = document.getElementById('batch-result');
     const lookupEmail = document.getElementById('lookup-email');
     const lookupBtn = document.getElementById('btn-lookup');
@@ -1900,6 +1992,14 @@
     let stockNoticeText = '';
     let productBaseAmountCents = 200;
     let productCurrency = 'CNY';
+
+    if (accessConfirmButton && accessConfirm) {
+      accessConfirmButton.focus({ preventScroll: true });
+      accessConfirmButton.addEventListener('click', () => {
+        accessConfirm.classList.add('is-hidden');
+        document.body.classList.remove('purchase-confirm-open');
+      });
+    }
 
     function normalizeEmailInput(value) {
       return String(value || '')
