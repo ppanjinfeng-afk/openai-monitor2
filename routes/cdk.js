@@ -49,51 +49,91 @@ function normalizeTaskStatus(status) {
   return String(status || '').trim().toUpperCase();
 }
 
+function normalizeCdkCode(code) {
+  return String(code || '').trim().toUpperCase();
+}
+
 function makeHttpError(message, statusCode = 400) {
   const err = new Error(message);
   err.statusCode = statusCode;
   return err;
 }
 
-function getLatestTeamTaskForCard(cardId) {
+function getLatestTeamTaskForCard(cardId, cardCode = '') {
+  const id = Number(cardId || 0);
+  const code = normalizeCdkCode(cardCode);
   return db.prepare(`
     SELECT *
     FROM cdk_tasks
-    WHERE cdk_id = ?
-      AND task_type = 'team_invite'
+    WHERE task_type = 'team_invite'
+      AND (
+        (? > 0 AND cdk_id = ?)
+        OR (? != '' AND UPPER(TRIM(cdk_code)) = ?)
+      )
     ORDER BY datetime(COALESCE(NULLIF(updated_at, ''), created_at)) DESC
     LIMIT 1
-  `).get(cardId);
+  `).get(id, id, code, code);
 }
 
-function getSuccessfulTeamTaskForCard(cardId) {
+function getSuccessfulTeamTaskForCard(cardId, cardCode = '') {
+  const id = Number(cardId || 0);
+  const code = normalizeCdkCode(cardCode);
   return db.prepare(`
     SELECT *
     FROM cdk_tasks
-    WHERE cdk_id = ?
-      AND task_type = 'team_invite'
+    WHERE task_type = 'team_invite'
       AND status = 'SUCCESS'
+      AND (
+        (? > 0 AND cdk_id = ?)
+        OR (? != '' AND UPPER(TRIM(cdk_code)) = ?)
+      )
     ORDER BY datetime(COALESCE(NULLIF(completed_at, ''), updated_at, created_at)) DESC
     LIMIT 1
-  `).get(cardId);
+  `).get(id, id, code, code);
 }
 
-function getActiveTeamTaskForCard(cardId) {
+function getActiveTeamTaskForCard(cardId, cardCode = '') {
+  const id = Number(cardId || 0);
+  const code = normalizeCdkCode(cardCode);
   return db.prepare(`
     SELECT *
     FROM cdk_tasks
-    WHERE cdk_id = ?
-      AND task_type = 'team_invite'
+    WHERE task_type = 'team_invite'
       AND UPPER(status) IN ('PENDING', 'PROCESSING')
+      AND (
+        (? > 0 AND cdk_id = ?)
+        OR (? != '' AND UPPER(TRIM(cdk_code)) = ?)
+      )
     ORDER BY datetime(COALESCE(NULLIF(updated_at, ''), created_at)) DESC
     LIMIT 1
-  `).get(cardId);
+  `).get(id, id, code, code);
 }
 
 function markCardUsedFromTask(task) {
-  if (!task?.cdk_id) {
+  const cdkId = Number(task?.cdk_id || 0);
+  const cdkCode = normalizeCdkCode(task?.cdk_code);
+  if (!cdkId && !cdkCode) {
     return;
   }
+
+  let cardId = cdkId;
+  if (!cardId && cdkCode) {
+    const card = db.prepare('SELECT id FROM cdk_cards WHERE code = ?').get(cdkCode);
+    cardId = Number(card?.id || 0);
+    if (cardId && task?.id) {
+      db.prepare(`
+        UPDATE cdk_tasks
+        SET cdk_id = ?
+        WHERE id = ?
+          AND cdk_id IS NULL
+      `).run(cardId, task.id);
+    }
+  }
+
+  if (!cardId) {
+    return;
+  }
+
   db.prepare(`
     UPDATE cdk_cards
     SET status = 'used',
@@ -101,7 +141,42 @@ function markCardUsedFromTask(task) {
         used_at = COALESCE(used_at, datetime('now')),
         updated_at = datetime('now')
     WHERE id = ?
-  `).run(task.account_email || '', task.cdk_id);
+  `).run(task.account_email || '', cardId);
+}
+
+function markCardProcessingFromTask(task) {
+  const cdkId = Number(task?.cdk_id || 0);
+  const cdkCode = normalizeCdkCode(task?.cdk_code);
+  if (!cdkId && !cdkCode) {
+    return;
+  }
+
+  let cardId = cdkId;
+  if (!cardId && cdkCode) {
+    const card = db.prepare('SELECT id FROM cdk_cards WHERE code = ?').get(cdkCode);
+    cardId = Number(card?.id || 0);
+    if (cardId && task?.id) {
+      db.prepare(`
+        UPDATE cdk_tasks
+        SET cdk_id = ?
+        WHERE id = ?
+          AND cdk_id IS NULL
+      `).run(cardId, task.id);
+    }
+  }
+
+  if (!cardId) {
+    return;
+  }
+
+  db.prepare(`
+    UPDATE cdk_cards
+    SET status = 'processing',
+        assigned_email = COALESCE(NULLIF(assigned_email, ''), ?),
+        updated_at = datetime('now')
+    WHERE id = ?
+      AND status != 'used'
+  `).run(task.account_email || '', cardId);
 }
 
 function isValidEmail(email) {
@@ -250,7 +325,7 @@ function createTeamInviteTask(cardCodeInput, emailInput, options = {}) {
 
   const preflightCard = db.prepare('SELECT * FROM cdk_cards WHERE code = ?').get(cardCode);
   if (preflightCard) {
-    const latestTask = getLatestTeamTaskForCard(preflightCard.id);
+    const latestTask = getLatestTeamTaskForCard(preflightCard.id, preflightCard.code);
     if (latestTask && normalizeTaskStatus(latestTask.status) === 'FAILED') {
       try {
         reconcileCdkTeamTaskSuccess(latestTask.id, { source: 'submit_preflight_reconcile' });
@@ -271,7 +346,7 @@ function createTeamInviteTask(cardCodeInput, emailInput, options = {}) {
       throw err;
     }
 
-    const successfulTask = getSuccessfulTeamTaskForCard(card.id);
+    const successfulTask = getSuccessfulTeamTaskForCard(card.id, card.code);
     if (successfulTask || card.status === 'used') {
       if (successfulTask) {
         markCardUsedFromTask(successfulTask);
@@ -279,7 +354,7 @@ function createTeamInviteTask(cardCodeInput, emailInput, options = {}) {
       throw makeHttpError('CDK 已使用', 400);
     }
 
-    const activeTask = getActiveTeamTaskForCard(card.id);
+    const activeTask = getActiveTeamTaskForCard(card.id, card.code);
     if (activeTask) {
       const activeEmail = normalizeEmail(activeTask.account_email);
       if (activeEmail && activeEmail !== email) {
@@ -620,14 +695,41 @@ router.post('/verify', (req, res) => {
     });
   }
 
-  if (card.status === 'used') {
-    return res.json({ 
-      valid: false, 
+  const latestTask = getLatestTeamTaskForCard(card.id, card.code);
+  if (latestTask && normalizeTaskStatus(latestTask.status) === 'FAILED') {
+    try {
+      reconcileCdkTeamTaskSuccess(latestTask.id, { source: 'verify_preflight_reconcile' });
+    } catch (err) {
+      logCdkRouteError(`verify reconcile task ${latestTask.id} failed`, err);
+    }
+  }
+
+  const successfulTask = getSuccessfulTeamTaskForCard(card.id, card.code);
+  if (successfulTask || card.status === 'used') {
+    if (successfulTask) {
+      markCardUsedFromTask(successfulTask);
+    }
+    return res.json({
+      valid: false,
       message: '此卡密已被使用',
       cardStatus: '1',
       isUsed: true,
       isProcessing: false,
       activationAllowed: false,
+    });
+  }
+
+  const activeTask = getActiveTeamTaskForCard(card.id, card.code);
+  if (activeTask) {
+    markCardProcessingFromTask(activeTask);
+    return res.json({
+      valid: false,
+      message: '此 CDK 正在处理中，请稍后查询任务结果',
+      cardStatus: '3',
+      isUsed: false,
+      isProcessing: true,
+      activationAllowed: false,
+      planType: card.plan_type,
     });
   }
 

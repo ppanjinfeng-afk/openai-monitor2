@@ -558,6 +558,25 @@
       Object.entries(modes).forEach(([key, node]) => node.classList.toggle('active', key === mode));
     }
 
+    function getVerifyOutcome(data) {
+      if (!data || data.valid === false) {
+        return {
+          ok: false,
+          text: data?.message || data?.msg || 'CDK 不可用',
+        };
+      }
+      if (data.activationAllowed === false) {
+        return {
+          ok: false,
+          text: data.inventoryMessage || data.message || '当前无法激活此 CDK，请稍后再试',
+        };
+      }
+      return {
+        ok: true,
+        text: data.message || 'CDK 可用',
+      };
+    }
+
     async function verifySingle() {
       const cardCode = normalizeCdk(singleCdk.value);
       singleCdk.value = cardCode;
@@ -574,9 +593,17 @@
           method: 'POST',
           body: JSON.stringify({ cardCode }),
         });
+        const outcome = getVerifyOutcome(data);
+        if (!outcome.ok) {
+          setMessage(singleMessage, 'error', outcome.text);
+          return false;
+        }
         const inventory = data.activationStockCount ?? data.stockCount;
         const suffix = Number.isFinite(Number(inventory)) ? `，当前可激活库存 ${inventory} 个` : '';
-        setMessage(singleMessage, 'success', `CDK 可用${suffix}`);
+        const message = suffix && !String(outcome.text || '').includes('库存')
+          ? `${outcome.text}${suffix}`
+          : outcome.text;
+        setMessage(singleMessage, 'success', message);
         return true;
       } catch (err) {
         setMessage(singleMessage, 'error', err.message || 'CDK 验证失败');
@@ -723,11 +750,16 @@
       const rows = [];
       for (const item of items) {
         try {
-          await request('/api/cdk/verify', {
+          const data = await request('/api/cdk/verify', {
             method: 'POST',
             body: JSON.stringify({ cardCode: item.cardCode }),
           });
-          rows.push({ ...item, status: '可用', type: 'success' });
+          const outcome = getVerifyOutcome(data);
+          rows.push({
+            ...item,
+            status: outcome.ok ? '可用' : outcome.text,
+            type: outcome.ok ? 'success' : 'error',
+          });
         } catch (err) {
           rows.push({ ...item, status: err.message || '失败', type: 'error' });
         }
