@@ -89,7 +89,26 @@ sudo systemctl restart openai-monitor
 sudo systemctl reload nginx
 ```
 
-## 4. 检查状态
+## 4. 设置后台账号密码
+
+在 VPS 上运行。中文用户名也支持：
+
+```bash
+cd /opt/openai-monitor
+sudo env \
+  ADMIN_BASIC_AUTH_ENABLED=true \
+  ADMIN_BASIC_AUTH_USER='派大星' \
+  ADMIN_BASIC_AUTH_PASS='CHANGE_THIS_ADMIN_PASSWORD' \
+  node deploy/scripts/configure-admin-auth.js
+sudo rm -f /etc/systemd/system/openai-monitor.service.d/admin-auth.conf
+sudo rm -f /etc/systemd/system/openai-monitor.service.d/zz-admin-auth.conf
+sudo systemctl daemon-reload
+sudo systemctl restart openai-monitor
+```
+
+不要把真实后台密码提交到 GitHub。上面的 `CHANGE_THIS_ADMIN_PASSWORD` 在 VPS 上替换成真实密码即可。
+
+## 5. 检查状态
 
 ```bash
 systemctl status openai-monitor --no-pager

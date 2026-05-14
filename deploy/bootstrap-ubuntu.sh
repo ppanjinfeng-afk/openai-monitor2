@@ -95,6 +95,14 @@ db.prepare(`
 NODE
 fi
 
+if [[ -n "$ADMIN_BASIC_AUTH_ENABLED$ADMIN_BASIC_AUTH_USER$ADMIN_BASIC_AUTH_PASS" ]]; then
+  echo "Configuring admin auth settings..."
+  ADMIN_BASIC_AUTH_ENABLED="$ADMIN_BASIC_AUTH_ENABLED" \
+  ADMIN_BASIC_AUTH_USER="$ADMIN_BASIC_AUTH_USER" \
+  ADMIN_BASIC_AUTH_PASS="$ADMIN_BASIC_AUTH_PASS" \
+    node "$APP_DIR/deploy/scripts/configure-admin-auth.js"
+fi
+
 echo "[6/8] Installing systemd services..."
 cp "$APP_DIR/deploy/systemd/openai-monitor.service" /etc/systemd/system/openai-monitor.service
 cp "$APP_DIR/deploy/systemd/openai-monitor-healthcheck.service" /etc/systemd/system/openai-monitor-healthcheck.service
@@ -106,15 +114,6 @@ mkdir -p /etc/systemd/system/openai-monitor.service.d
 {
   echo "[Service]"
   echo "Environment=PUPPETEER_CACHE_DIR=$PUPPETEER_CACHE_DIR"
-  if [[ -n "$ADMIN_BASIC_AUTH_ENABLED" ]]; then
-    echo "Environment=ADMIN_BASIC_AUTH_ENABLED=$ADMIN_BASIC_AUTH_ENABLED"
-  fi
-  if [[ -n "$ADMIN_BASIC_AUTH_USER" ]]; then
-    echo "Environment=ADMIN_BASIC_AUTH_USER=$ADMIN_BASIC_AUTH_USER"
-  fi
-  if [[ -n "$ADMIN_BASIC_AUTH_PASS" ]]; then
-    echo "Environment=ADMIN_BASIC_AUTH_PASS=$ADMIN_BASIC_AUTH_PASS"
-  fi
 } > /etc/systemd/system/openai-monitor.service.d/runtime.conf
 systemctl daemon-reload
 
