@@ -2770,6 +2770,9 @@ router.post('/auto-invite', async (req, res) => {
     const externalExcludedWorkspaceIds = normalizeWorkspaceIdList(
       req.body.exclude_workspace_ids || req.body.excludeWorkspaceIds || []
     );
+    const avoidedWorkspaceIds = normalizeWorkspaceIdList(
+      req.body.avoid_workspace_ids || req.body.avoidWorkspaceIds || []
+    );
     const preferredWorkspaceId = normalizeWorkspaceId(
       req.body.preferred_workspace_id || req.body.preferredWorkspaceId || ''
     );
@@ -2857,36 +2860,48 @@ router.post('/auto-invite', async (req, res) => {
       const strictExcludedIds = preferFreshWorkspace
         ? Array.from(new Set([...excludedIds, ...usedAccountIds]))
         : excludedIds;
-      const effectiveExcludedWorkspaceIds = Array.from(new Set([
+      const hardExcludedWorkspaceIds = Array.from(new Set([
         ...usedWorkspaceIds,
         ...externalExcludedWorkspaceIds,
+      ]));
+      const softExcludedWorkspaceIds = Array.from(new Set([
+        ...hardExcludedWorkspaceIds,
+        ...avoidedWorkspaceIds,
       ]));
       const preferredWorkspaceCandidate = (!preferredWorkspaceLocked && !preferredWorkspaceBlockedByHistory)
         ? getPreferredWorkspaceCandidate(preferredAccountId, preferredWorkspaceId, {
           excludedAccountIds: strictExcludedIds,
-          excludedWorkspaceIds: effectiveExcludedWorkspaceIds,
+          excludedWorkspaceIds: hardExcludedWorkspaceIds,
         })
         : null;
-      const getNonPausedDegradedWorkspaceCandidates = excludedAccountIds =>
+      const getNonPausedDegradedWorkspaceCandidates = (excludedAccountIds, excludedWorkspaceIds) =>
         getInviteWorkspaceCandidates(excludedAccountIds, {
-          excludedWorkspaceIds: effectiveExcludedWorkspaceIds,
+          excludedWorkspaceIds,
           includeDegraded: true,
         }).filter(candidate => !isInvitePaused(candidate?.account));
-      workspaceCandidates = getInviteWorkspaceCandidates(strictExcludedIds, {
-        excludedWorkspaceIds: effectiveExcludedWorkspaceIds,
-      });
+      const loadWorkspaceCandidates = (excludedAccountIds, excludedWorkspaceIds) => {
+        let candidates = getInviteWorkspaceCandidates(excludedAccountIds, {
+          excludedWorkspaceIds,
+        });
 
-      if (workspaceCandidates.length === 0) {
-        workspaceCandidates = getNonPausedDegradedWorkspaceCandidates(strictExcludedIds);
+        if (candidates.length === 0) {
+          candidates = getNonPausedDegradedWorkspaceCandidates(excludedAccountIds, excludedWorkspaceIds);
+        }
+
+        return candidates;
+      };
+
+      workspaceCandidates = loadWorkspaceCandidates(strictExcludedIds, softExcludedWorkspaceIds);
+
+      if (workspaceCandidates.length === 0 && avoidedWorkspaceIds.length > 0) {
+        workspaceCandidates = loadWorkspaceCandidates(strictExcludedIds, hardExcludedWorkspaceIds);
       }
 
       if (preferFreshWorkspace && workspaceCandidates.length === 0 && usedWorkspaceIds.length > 0) {
-        workspaceCandidates = getInviteWorkspaceCandidates(excludedIds, {
-          excludedWorkspaceIds: effectiveExcludedWorkspaceIds,
-        });
+        workspaceCandidates = loadWorkspaceCandidates(excludedIds, softExcludedWorkspaceIds);
 
-        if (workspaceCandidates.length === 0) {
-          workspaceCandidates = getNonPausedDegradedWorkspaceCandidates(excludedIds);
+        if (workspaceCandidates.length === 0 && avoidedWorkspaceIds.length > 0) {
+          workspaceCandidates = loadWorkspaceCandidates(excludedIds, hardExcludedWorkspaceIds);
         }
       }
 

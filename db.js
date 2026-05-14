@@ -246,6 +246,8 @@ ensureColumn('cdk_cards', 'source_order_no', "source_order_no TEXT DEFAULT ''");
 ensureColumn('cdk_tasks', 'task_type', "task_type TEXT DEFAULT 'plus_checkout'");
 ensureColumn('cdk_tasks', 'invite_result_json', "invite_result_json TEXT DEFAULT ''");
 ensureColumn('cdk_tasks', 'task_token', "task_token TEXT DEFAULT ''");
+ensureColumn('cdk_tasks', 'batch_id', "batch_id TEXT DEFAULT ''");
+ensureColumn('cdk_tasks', 'batch_index', 'batch_index INTEGER DEFAULT 0');
 ensureColumn('cdk_orders', 'public_token', "public_token TEXT DEFAULT ''");
 ensureColumn('cdk_orders', 'paid_amount_cents', "paid_amount_cents INTEGER DEFAULT 0");
 ensureColumn('cdk_orders', 'payer_name', "payer_name TEXT DEFAULT ''");
@@ -304,6 +306,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_cdk_tasks_status ON cdk_tasks(status);
   CREATE INDEX IF NOT EXISTS idx_cdk_tasks_cdk_code ON cdk_tasks(cdk_code);
   CREATE INDEX IF NOT EXISTS idx_cdk_tasks_task_token ON cdk_tasks(task_token);
+  CREATE INDEX IF NOT EXISTS idx_cdk_tasks_batch ON cdk_tasks(batch_id, batch_index);
   CREATE INDEX IF NOT EXISTS idx_cdk_orders_order_no ON cdk_orders(order_no);
   CREATE INDEX IF NOT EXISTS idx_cdk_orders_public_token ON cdk_orders(public_token);
   CREATE INDEX IF NOT EXISTS idx_cdk_orders_status ON cdk_orders(status);

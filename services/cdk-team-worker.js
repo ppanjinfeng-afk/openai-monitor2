@@ -14,6 +14,30 @@ const TEAM_WORKER_CONCURRENCY = Math.max(
   1,
   Math.min(Number(process.env.CDK_TEAM_WORKER_CONCURRENCY || 1) || 1, 5)
 );
+const BATCH_PREVIOUS_WAIT_TIMEOUT_MS = Math.max(
+  0,
+  Number(process.env.CDK_TEAM_BATCH_PREVIOUS_WAIT_TIMEOUT_MS || 360000)
+);
+const BATCH_PREVIOUS_WAIT_INTERVAL_MS = Math.max(
+  500,
+  Number(process.env.CDK_TEAM_BATCH_PREVIOUS_WAIT_INTERVAL_MS || 1000)
+);
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function parseJsonSafely(value) {
+  try {
+    return value ? JSON.parse(value) : {};
+  } catch {
+    return {};
+  }
+}
+
+function normalizeWorkspaceId(value) {
+  return String(value || '').trim();
+}
 
 class CdkTeamWorker {
   constructor() {
@@ -76,9 +100,15 @@ class CdkTeamWorker {
         throw new Error('Target email is required');
       }
 
+      if (this.shouldWaitForPreviousBatchTask(task)) {
+        this.updateTask(taskId, 'PROCESSING', '正在按批量顺序选择工作区...');
+      }
+
+      const batchContext = await this.getBatchInviteContext(task);
+
       this.updateTask(taskId, 'PROCESSING', '正在发送 Team 邀请...');
 
-      const result = await this.sendAutoInvite(email, task);
+      const result = await this.sendAutoInvite(email, task, batchContext);
       this.completeTask(taskId, result);
     } catch (err) {
       console.error(`[CDK Team Worker] Task ${taskId} failed:`, err.message);
@@ -125,11 +155,73 @@ class CdkTeamWorker {
     return false;
   }
 
-  async sendAutoInvite(email, task = null) {
+  shouldWaitForPreviousBatchTask(task = {}) {
+    return Boolean(String(task.batch_id || '').trim() && Number(task.batch_index || 0) > 1);
+  }
+
+  getPreviousBatchTask(task = {}) {
+    const batchId = String(task.batch_id || '').trim();
+    const batchIndex = Number(task.batch_index || 0);
+    if (!batchId || batchIndex <= 1) {
+      return null;
+    }
+
+    return db.prepare(`
+      SELECT *
+      FROM cdk_tasks
+      WHERE batch_id = ?
+        AND batch_index = ?
+        AND task_type = 'team_invite'
+      LIMIT 1
+    `).get(batchId, batchIndex - 1);
+  }
+
+  getTaskWorkspaceId(task = {}) {
+    const result = parseJsonSafely(task.invite_result_json);
+    return normalizeWorkspaceId(result.workspace_id || result.workspaceId);
+  }
+
+  async getBatchInviteContext(task = {}) {
+    if (!this.shouldWaitForPreviousBatchTask(task)) {
+      return { avoidWorkspaceIds: [] };
+    }
+
+    const startedAt = Date.now();
+    while (true) {
+      const previousTask = this.getPreviousBatchTask(task);
+      if (!previousTask) {
+        return { avoidWorkspaceIds: [] };
+      }
+
+      const previousStatus = String(previousTask.status || '').trim().toUpperCase();
+      if (previousStatus === 'SUCCESS') {
+        const workspaceId = this.getTaskWorkspaceId(previousTask);
+        return { avoidWorkspaceIds: workspaceId ? [workspaceId] : [] };
+      }
+
+      if (previousStatus === 'FAILED') {
+        return { avoidWorkspaceIds: [] };
+      }
+
+      if (BATCH_PREVIOUS_WAIT_TIMEOUT_MS === 0 || Date.now() - startedAt >= BATCH_PREVIOUS_WAIT_TIMEOUT_MS) {
+        console.warn(
+          `[CDK Team Worker] Batch task ${task.id} did not wait longer for previous batch item ${previousTask.id}`
+        );
+        return { avoidWorkspaceIds: [] };
+      }
+
+      await sleep(BATCH_PREVIOUS_WAIT_INTERVAL_MS);
+    }
+  }
+
+  async sendAutoInvite(email, task = null, context = {}) {
     const baseUrl = process.env.INTERNAL_BASE_URL || `http://127.0.0.1:${process.env.PORT || 3000}`;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), TEAM_INVITE_REQUEST_TIMEOUT_MS);
     let response;
+    const avoidWorkspaceIds = Array.isArray(context.avoidWorkspaceIds)
+      ? context.avoidWorkspaceIds.map(normalizeWorkspaceId).filter(Boolean)
+      : [];
 
     try {
       response = await fetch(`${baseUrl}/api/accounts/auto-invite`, {
@@ -144,6 +236,9 @@ class CdkTeamWorker {
           cdk_task_id: task?.id || '',
           cdk_id: task?.cdk_id || '',
           cdk_code: task?.cdk_code || '',
+          batch_id: task?.batch_id || '',
+          batch_index: Number(task?.batch_index || 0),
+          avoid_workspace_ids: avoidWorkspaceIds,
         }),
         signal: controller.signal,
       });

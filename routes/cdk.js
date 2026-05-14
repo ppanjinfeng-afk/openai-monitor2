@@ -230,9 +230,11 @@ function getTeamInventoryPayloadSafely(card, context) {
   }
 }
 
-function createTeamInviteTask(cardCodeInput, emailInput) {
+function createTeamInviteTask(cardCodeInput, emailInput, options = {}) {
   const cardCode = String(cardCodeInput || '').trim().toUpperCase();
   const email = normalizeEmail(emailInput);
+  const batchId = String(options.batchId || '').trim();
+  const batchIndex = Math.max(0, Number.parseInt(options.batchIndex, 10) || 0);
 
   if (!cardCode) {
     const err = new Error('缺少 CDK 卡密');
@@ -289,9 +291,19 @@ function createTeamInviteTask(cardCodeInput, emailInput) {
         db.prepare(`
           UPDATE cdk_tasks
           SET task_token = ?,
+              batch_id = CASE WHEN ? != '' AND COALESCE(batch_id, '') = '' THEN ? ELSE batch_id END,
+              batch_index = CASE WHEN ? > 0 AND COALESCE(batch_index, 0) = 0 THEN ? ELSE batch_index END,
               updated_at = datetime('now')
           WHERE id = ?
-        `).run(existingToken, activeTask.id);
+        `).run(existingToken, batchId, batchId, batchIndex, batchIndex, activeTask.id);
+      } else if (batchId && !String(activeTask.batch_id || '').trim()) {
+        db.prepare(`
+          UPDATE cdk_tasks
+          SET batch_id = ?,
+              batch_index = ?,
+              updated_at = datetime('now')
+          WHERE id = ?
+        `).run(batchId, batchIndex, activeTask.id);
       }
 
       db.prepare(`
@@ -307,6 +319,8 @@ function createTeamInviteTask(cardCodeInput, emailInput) {
         taskToken: existingToken,
         cardCode,
         email: activeTask.account_email || email,
+        batchId: activeTask.batch_id || batchId,
+        batchIndex: Number(activeTask.batch_index || batchIndex || 0),
         reused: true,
       };
     }
@@ -337,10 +351,12 @@ function createTeamInviteTask(cardCodeInput, emailInput) {
         task_type,
         account_email,
         task_token,
+        batch_id,
+        batch_index,
         status,
         status_message
-      ) VALUES (?, ?, ?, 'team_invite', ?, ?, 'pending', 'Team 邀请任务已创建')
-    `).run(taskId, card.id, cardCode, email, taskToken);
+      ) VALUES (?, ?, ?, 'team_invite', ?, ?, ?, ?, 'pending', 'Team 邀请任务已创建')
+    `).run(taskId, card.id, cardCode, email, taskToken, batchId, batchIndex);
 
     db.prepare(`
       UPDATE cdk_cards
@@ -355,6 +371,8 @@ function createTeamInviteTask(cardCodeInput, emailInput) {
       taskToken,
       cardCode,
       email,
+      batchId,
+      batchIndex,
     };
   });
 
@@ -772,6 +790,7 @@ router.post('/submit-team-batch', async (req, res) => {
   refreshInventorySafely('submit-team-batch');
 
   const items = Array.isArray(req.body.items) ? req.body.items : [];
+  const batchId = generateTaskId();
   if (!items.length) {
     return res.status(400).json({ code: 400, msg: '请至少提供一条批量激活记录' });
   }
@@ -804,13 +823,18 @@ router.post('/submit-team-batch', async (req, res) => {
     }
 
     try {
-      const created = createTeamInviteTask(cardCode, email);
+      const created = createTeamInviteTask(cardCode, email, {
+        batchId,
+        batchIndex: tasks.length + 1,
+      });
       tasks.push({
         lineNumber,
         cardCode: created.cardCode,
         email: created.email,
         taskId: created.taskId,
         taskToken: created.taskToken,
+        batchId: created.batchId,
+        batchIndex: created.batchIndex,
       });
     } catch (err) {
       errors.push({
