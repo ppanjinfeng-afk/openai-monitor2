@@ -232,7 +232,7 @@ function canUseEmailTimeFallbackForTask(task = {}, targetEmail = '', createdAt =
     LEFT JOIN cdk_cards c ON c.id = t.cdk_id
     WHERE t.task_type = 'team_invite'
       AND LOWER(t.account_email) = LOWER(@targetEmail)
-      AND UPPER(COALESCE(t.status, '')) IN ('FAILED', 'PENDING', 'PROCESSING')
+      AND UPPER(COALESCE(t.status, '')) IN ('FAILED', 'PENDING', 'PROCESSING', 'SUCCESS')
       AND datetime(COALESCE(NULLIF(t.created_at, ''), NULLIF(t.updated_at, ''), '1970-01-01 00:00:00'))
         BETWEEN datetime(@createdAt, '-30 minutes') AND datetime(@createdAt, '+30 minutes')
     ORDER BY datetime(COALESCE(NULLIF(t.created_at, ''), NULLIF(t.updated_at, ''), '1970-01-01 00:00:00')) DESC,
@@ -312,6 +312,7 @@ function findSuccessfulPendingInviteForTask(taskOrId) {
         AND (@remoteInviteId = '' OR COALESCE(wp.remote_invite_id, '') = @remoteInviteId)
         AND (@workspaceId = '' OR wp.workspace_id = @workspaceId)
         AND (@accountId IS NULL OR wp.account_id = @accountId)
+        AND (COALESCE(wp.source_cdk_task_id, '') = '' OR wp.source_cdk_task_id = @taskId)
         AND (
           @createdAt = ''
           OR (
@@ -338,6 +339,7 @@ function findSuccessfulPendingInviteForTask(taskOrId) {
   return db.prepare(`
     ${selectPendingSql}
     WHERE LOWER(wp.email) = LOWER(@targetEmail)
+      AND (COALESCE(wp.source_cdk_task_id, '') = '' OR wp.source_cdk_task_id = @taskId)
       AND COALESCE(NULLIF(wp.invited_at, ''), NULLIF(wp.last_synced_at, ''), '') != ''
       AND datetime(COALESCE(NULLIF(wp.invited_at, ''), NULLIF(wp.last_synced_at, '')))
         >= datetime(@createdAt, '-30 minutes')
@@ -434,6 +436,7 @@ function findSuccessfulMemberForTask(taskOrId) {
         AND COALESCE(wm.deactivated_time, '') = ''
         AND (@workspaceId = '' OR wm.workspace_id = @workspaceId)
         AND (@accountId IS NULL OR wm.account_id = @accountId)
+        AND (COALESCE(wm.source_cdk_task_id, '') = '' OR wm.source_cdk_task_id = @taskId)
         AND (
           @createdAt = ''
           OR (
@@ -464,6 +467,7 @@ function findSuccessfulMemberForTask(taskOrId) {
     ${selectMemberSql}
     WHERE LOWER(wm.email) = LOWER(@targetEmail)
       AND COALESCE(wm.deactivated_time, '') = ''
+      AND (COALESCE(wm.source_cdk_task_id, '') = '' OR wm.source_cdk_task_id = @taskId)
       AND COALESCE(NULLIF(wm.joined_at, ''), NULLIF(wm.last_synced_at, ''), '') != ''
       AND datetime(COALESCE(NULLIF(wm.joined_at, ''), NULLIF(wm.last_synced_at, '')))
         >= datetime(@createdAt, '-30 minutes')
