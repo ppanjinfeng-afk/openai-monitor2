@@ -7,36 +7,45 @@
 先确保 Cloudflare 里这些 DNS 已经指向 VPS IP：
 
 ```text
-2人team.com        A  <VPS_IP>
-www.2人team.com    A  <VPS_IP>
-admin.2人team.com  A  <VPS_IP>
+2人team.com          A  <VPS_IP>
+www.2人team.com      A  <VPS_IP>
+activate.2人team.com A  <VPS_IP>
+admin.2人team.com    A  <VPS_IP>
 ```
 
 中文域名对应的 punycode：
 
 ```text
-2人team.com        xn--2team-cd2h.com
-www.2人team.com    www.xn--2team-cd2h.com
-admin.2人team.com  admin.xn--2team-cd2h.com
+2人team.com          xn--2team-cd2h.com
+www.2人team.com      www.xn--2team-cd2h.com
+activate.2人team.com activate.xn--2team-cd2h.com
+admin.2人team.com    admin.xn--2team-cd2h.com
 ```
 
-在新 VPS 上运行：
+在新 VPS 上运行这一条。以后开新服务器就按这个格式改域名、仓库和密码：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ppanjinfeng-afk/openai-monitor2/main/deploy/bootstrap-ubuntu.sh \
   | sudo env \
       PUBLIC_TUNNEL_ENABLED=true \
       ADMIN_BASIC_AUTH_ENABLED=true \
-      ADMIN_BASIC_AUTH_USER=admin \
+      ADMIN_BASIC_AUTH_USER='派大星' \
       ADMIN_BASIC_AUTH_PASS='CHANGE_THIS_ADMIN_PASSWORD' \
-      CERTBOT_DOMAINS='xn--2team-cd2h.com,www.xn--2team-cd2h.com,admin.xn--2team-cd2h.com' \
+      CERTBOT_DOMAINS='xn--2team-cd2h.com,www.xn--2team-cd2h.com,activate.xn--2team-cd2h.com,admin.xn--2team-cd2h.com' \
       bash -s -- https://github.com/ppanjinfeng-afk/openai-monitor2.git /opt/openai-monitor
 ```
 
-如果 `admin.2人team.com` 的 DNS 还没加好，先把 `CERTBOT_DOMAINS` 里的 `admin.xn--2team-cd2h.com` 删除，等 DNS 生效后再运行：
+如果某个子域名 DNS 还没加好，先从 `CERTBOT_DOMAINS` 里删掉那个域名，等 DNS 生效后再补签。例如后台域名：
 
 ```bash
 sudo certbot --nginx -d admin.xn--2team-cd2h.com --redirect
+sudo systemctl reload nginx
+```
+
+激活域名补签：
+
+```bash
+sudo certbot --nginx -d activate.xn--2team-cd2h.com --redirect
 sudo systemctl reload nginx
 ```
 
@@ -108,7 +117,26 @@ sudo systemctl restart openai-monitor
 
 不要把真实后台密码提交到 GitHub。上面的 `CHANGE_THIS_ADMIN_PASSWORD` 在 VPS 上替换成真实密码即可。
 
-## 5. 检查状态
+## 5. 当前站点分工
+
+```text
+购买页：https://2人team.com/buy
+购买域名加入页：https://2人team.com/join
+只有激活页：https://activate.2人team.com/
+只有激活页备用路径：https://activate.2人team.com/join
+后台：https://admin.2人team.com/
+```
+
+激活域名的限制：
+
+```text
+https://activate.2人team.com/      -> 激活页
+https://activate.2人team.com/join  -> 激活页
+https://activate.2人team.com/buy   -> 跳回 /
+https://activate.2人team.com/admin-login -> 404
+```
+
+## 6. 检查状态
 
 ```bash
 systemctl status openai-monitor --no-pager
@@ -116,12 +144,4 @@ systemctl status nginx --no-pager
 systemctl status openai-monitor-healthcheck.timer --no-pager
 systemctl status openai-monitor-cdk-expire.timer --no-pager
 curl http://127.0.0.1:3000/api/checks/status
-```
-
-访问地址：
-
-```text
-购买页：https://2人team.com/buy
-兑换页：https://2人team.com/join
-后台：https://admin.2人team.com/
 ```
