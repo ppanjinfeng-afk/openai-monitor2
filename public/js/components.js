@@ -1546,22 +1546,21 @@ const Components = {
     return `
       <div>
         <p class="form-intro">
-          已为 ${accountName} 生成新的 OAuth 授权链接。请先在新标签页完成 OpenAI 登录。
+          自动授权未完成，已为 ${accountName} 生成备用 OAuth 授权链接。
         </p>
         <div class="form-group">
-          <label>第 1 步：打开授权页</label>
+          <label>打开授权页</label>
           <div class="form-help">
-            如果浏览器没有自动打开，请点击下面这个按钮重新打开授权页。
+            在新标签页完成 OpenAI 登录后，复制浏览器地址栏里的 localhost 回调链接。
           </div>
           <div class="form-actions form-actions-spaced">
             <a class="btn btn-primary" href="${safeAuthUrl}" target="_blank" rel="noopener noreferrer">打开授权页</a>
           </div>
         </div>
         <div class="form-group">
-          <label for="oauth-callback-url">第 2 步：粘贴回调链接</label>
+          <label for="oauth-callback-url">回调链接</label>
           <div class="form-help">
-            如果授权完成后页面跳到 <code>http://localhost:1455/auth/callback...</code> 并提示无法访问，
-            请把浏览器地址栏里的完整链接复制到下面，再点“完成授权”。
+            粘贴后会自动完成授权；也可以点击“从剪贴板完成”。
           </div>
           <textarea
             id="oauth-callback-url"
@@ -1573,6 +1572,7 @@ const Components = {
         </div>
         <div class="form-actions form-actions-spaced">
           <button type="button" class="btn btn-secondary" onclick="App.closeModal()">取消</button>
+          <button type="button" class="btn btn-secondary" id="btn-complete-oauth-clipboard" onclick="App.completeOAuthFromClipboard()">从剪贴板完成</button>
           <button type="button" class="btn btn-primary" id="btn-complete-oauth" onclick="App.completeOAuthFromCallback()">完成授权</button>
         </div>
       </div>

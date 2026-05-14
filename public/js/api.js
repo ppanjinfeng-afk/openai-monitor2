@@ -19,7 +19,10 @@ const API = {
         : { error: rawText };
 
     if (!res.ok) {
-      throw new Error(data?.error || rawText || `HTTP ${res.status}`);
+      const error = new Error(data?.error || rawText || `HTTP ${res.status}`);
+      error.status = res.status;
+      error.data = data;
+      throw error;
     }
 
     return data || {};
@@ -358,6 +361,10 @@ const API = {
 
   startOAuth(id) {
     return this.request(`/api/checks/oauth/start/${id}`, { method: 'POST' });
+  },
+
+  autoOAuth(id) {
+    return this.request(`/api/checks/oauth/auto/${id}`, { method: 'POST' });
   },
 
   completeOAuth(callbackUrl) {

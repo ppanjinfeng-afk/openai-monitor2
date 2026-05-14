@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const db = require('../db');
 const checker = require('../services/checker');
+const oauthAutomation = require('../services/oauth-automation');
 const quotaSync = require('../services/quota-sync');
 const workspaceSync = require('../services/workspace-sync');
 const memberOverflowRebalance = require('../services/member-overflow-rebalance');
@@ -14,6 +15,10 @@ let isChecking = false;
 const OAUTH_CALLBACK_PORT = 1455;
 const OAUTH_CALLBACK_ORIGIN = `http://localhost:${OAUTH_CALLBACK_PORT}`;
 const OAUTH_FLOW_TIMEOUT_MS = 600000;
+const OAUTH_AUTO_WAIT_TOKEN_MS = Math.max(
+  5000,
+  Number(process.env.OAUTH_AUTO_WAIT_TOKEN_MS || 15000)
+);
 
 // state -> { codeVerifier, accountId, accountEmail, timeoutId }
 const activeOAuthFlows = new Map();
@@ -59,6 +64,64 @@ function storeOAuthFlow(state, flow) {
   });
 }
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function parseOAuthCallbackUrl(callbackUrl) {
+  if (callbackUrl instanceof URL) {
+    return callbackUrl;
+  }
+
+  const raw = String(callbackUrl || '').trim();
+  const compact = raw.replace(/\s+/g, '');
+  const fullMatch = compact.match(/https?:\/\/localhost:1455\/auth\/callback\?[^"'<>]+/i);
+  if (fullMatch) {
+    return new URL(fullMatch[0]);
+  }
+
+  const queryStart = compact.includes('?')
+    ? compact.slice(compact.indexOf('?') + 1)
+    : compact.replace(/^.*?(?=code=|state=)/i, '');
+
+  if (/code=/i.test(queryStart) && /state=/i.test(queryStart)) {
+    return new URL(`/auth/callback?${queryStart}`, OAUTH_CALLBACK_ORIGIN);
+  }
+
+  return new URL(compact, OAUTH_CALLBACK_ORIGIN);
+}
+
+function createOAuthFlowForAccount(account) {
+  const { authUrl, codeVerifier, state } = checker.startOAuthFlow(account.email);
+  clearOAuthFlow(state);
+  storeOAuthFlow(state, {
+    codeVerifier,
+    accountId: account.id,
+    accountEmail: account.email,
+  });
+  return { authUrl, state };
+}
+
+async function waitForSavedOAuthToken(accountId, previousAccessToken, timeoutMs = OAUTH_AUTO_WAIT_TOKEN_MS) {
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    const account = db.prepare(`
+      SELECT id, email, access_token, refresh_token
+      FROM accounts
+      WHERE id = ?
+    `).get(accountId);
+
+    if (account?.access_token && account.access_token !== previousAccessToken) {
+      return account;
+    }
+
+    await sleep(500);
+  }
+
+  throw new Error('OAuth token was not saved after the callback completed.');
+}
+
 async function handleOAuthCallback(cbReq, cbRes) {
   const url = new URL(cbReq.url, OAUTH_CALLBACK_ORIGIN);
 
@@ -87,9 +150,7 @@ async function handleOAuthCallback(cbReq, cbRes) {
 }
 
 async function completeOAuthAuthorizationFromUrl(callbackUrl) {
-  const url = callbackUrl instanceof URL
-    ? callbackUrl
-    : new URL(String(callbackUrl || '').trim(), OAUTH_CALLBACK_ORIGIN);
+  const url = parseOAuthCallbackUrl(callbackUrl);
 
   const code = url.searchParams.get('code');
   const returnedState = url.searchParams.get('state');
@@ -297,13 +358,7 @@ router.post('/oauth/start/:id', (req, res) => {
 
   ensureOAuthCallbackServer()
     .then(() => {
-      const { authUrl, codeVerifier, state } = checker.startOAuthFlow(account.email);
-      clearOAuthFlow(state);
-      storeOAuthFlow(state, {
-        codeVerifier,
-        accountId,
-        accountEmail: account.email,
-      });
+      const { authUrl, state } = createOAuthFlowForAccount(account);
       res.json({ authUrl, state });
     })
     .catch(err => {
@@ -313,6 +368,61 @@ router.post('/oauth/start/:id', (req, res) => {
       console.error('[OAuth] Failed to start callback server:', err.message);
       res.status(500).json({ error: message });
     });
+});
+
+router.post('/oauth/auto/:id', async (req, res) => {
+  const accountId = Number.parseInt(req.params.id, 10);
+  const account = db.prepare('SELECT * FROM accounts WHERE id = ?').get(accountId);
+  if (!account) {
+    return res.status(404).json({ error: 'Account not found' });
+  }
+
+  let authUrl = '';
+  let state = '';
+
+  try {
+    await ensureOAuthCallbackServer();
+    const flow = createOAuthFlowForAccount(account);
+    authUrl = flow.authUrl;
+    state = flow.state;
+
+    if (!account.password) {
+      return res.status(409).json({
+        error: '该账号没有保存密码，无法自动授权，请使用人工授权备用流程',
+        authUrl,
+        state,
+        manual_fallback: true,
+      });
+    }
+
+    await oauthAutomation.authorizeOAuthInBrowser({
+      authUrl,
+      email: account.email,
+      password: account.password,
+    });
+
+    const authorizedAccount = await waitForSavedOAuthToken(
+      accountId,
+      account.access_token || ''
+    );
+
+    return res.json({
+      success: true,
+      message: `OAuth 授权已自动完成：${authorizedAccount.email}`,
+      account_id: authorizedAccount.id,
+      account_email: authorizedAccount.email,
+    });
+  } catch (err) {
+    const message = err.message || 'OAuth auto authorization failed';
+    console.error(`[OAuth] Auto authorization failed for ${account.email}:`, message);
+
+    return res.status(400).json({
+      error: `自动授权失败：${message}`,
+      authUrl,
+      state,
+      manual_fallback: true,
+    });
+  }
 });
 
 router.post('/oauth/complete', async (req, res) => {

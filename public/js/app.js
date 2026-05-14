@@ -5066,33 +5066,117 @@ const App = {
 };
 
 App.oauthAccount = async function(id) {
-  this.toast('正在启动 OAuth 授权...', 'info');
+  this.toast('正在自动完成 OAuth 授权...', 'info');
   try {
     const account = Array.isArray(this.accounts)
       ? this.accounts.find(item => Number(item.id) === Number(id))
       : null;
-    const result = await API.startOAuth(id);
-    const popup = window.open(result.authUrl, '_blank', 'noopener,noreferrer');
-    this.showModal('完成 OAuth 授权', Components.oauthAssistModal(account, result.authUrl), { type: 'oauth' });
-    document.getElementById('oauth-callback-url')?.focus();
-    this.toast(
-      popup
-        ? '授权页已打开，完成登录后把 localhost 回调链接贴回弹窗即可完成授权'
-        : '浏览器拦截了新标签页，请点击弹窗里的“打开授权页”继续授权',
-      popup ? 'info' : 'warning'
-    );
-    setTimeout(() => this.loadAccounts(), 5000);
-    setTimeout(() => this.loadAccounts(), 15000);
-    setTimeout(() => this.loadAccounts(), 30000);
+    const result = await API.autoOAuth(id);
+    this.toast(result.message || 'OAuth 授权已自动完成', 'success');
+    await this.refreshWorkspaceChangeSurfaces({
+      includeLogs: this.currentPage === 'dashboard',
+      includeCurrentPage: true,
+    });
   } catch (err) {
-    this.toast(`OAuth 启动失败: ${err.message}`, 'error');
+    const account = Array.isArray(this.accounts)
+      ? this.accounts.find(item => Number(item.id) === Number(id))
+      : null;
+    const authUrl = err.data?.authUrl || '';
+
+    if (authUrl) {
+      const popup = window.open(authUrl, '_blank', 'noopener,noreferrer');
+      this.showModal('完成 OAuth 授权', Components.oauthAssistModal(account, authUrl), { type: 'oauth' });
+      this.bindOAuthAssistHandlers();
+      document.getElementById('oauth-callback-url')?.focus();
+      this.toast(
+        popup
+          ? `${err.message}。已打开备用授权页`
+          : `${err.message}。请点击弹窗里的“打开授权页”`,
+        'warning'
+      );
+      setTimeout(() => this.loadAccounts(), 5000);
+      setTimeout(() => this.loadAccounts(), 15000);
+      setTimeout(() => this.loadAccounts(), 30000);
+      return;
+    }
+
+    this.toast(`OAuth 授权失败: ${err.message}`, 'error');
   }
 };
 
-App.completeOAuthFromCallback = async function() {
+App.extractOAuthCallbackUrl = function(value = '') {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return '';
+  }
+
+  const compact = raw.replace(/\s+/g, '');
+  const fullMatch = compact.match(/https?:\/\/localhost:1455\/auth\/callback\?[^"'<>]+/i);
+  if (fullMatch) {
+    return fullMatch[0];
+  }
+
+  const queryStart = compact.includes('?')
+    ? compact.slice(compact.indexOf('?') + 1)
+    : compact.replace(/^.*?(?=code=|state=)/i, '');
+  if (/code=/i.test(queryStart) && /state=/i.test(queryStart)) {
+    return `http://localhost:1455/auth/callback?${queryStart}`;
+  }
+
+  if (/^https?:\/\/localhost:1455\/auth\/callback/i.test(compact)) {
+    return compact;
+  }
+
+  return '';
+};
+
+App.bindOAuthAssistHandlers = function() {
+  const input = document.getElementById('oauth-callback-url');
+  if (!input || input.dataset.oauthAssistBound === 'true') {
+    return;
+  }
+
+  input.dataset.oauthAssistBound = 'true';
+  let timer = null;
+
+  const scheduleAutoComplete = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const callbackUrl = this.extractOAuthCallbackUrl(input.value);
+      if (callbackUrl) {
+        this.completeOAuthFromCallback(callbackUrl, { automatic: true });
+      }
+    }, 250);
+  };
+
+  input.addEventListener('paste', () => setTimeout(scheduleAutoComplete, 0));
+  input.addEventListener('input', scheduleAutoComplete);
+};
+
+App.completeOAuthFromClipboard = async function() {
+  const input = document.getElementById('oauth-callback-url');
+  if (!navigator.clipboard?.readText) {
+    this.toast('当前浏览器不支持读取剪贴板，请直接粘贴回调链接', 'warning');
+    input?.focus();
+    return;
+  }
+
+  try {
+    const text = await navigator.clipboard.readText();
+    if (input) {
+      input.value = text;
+    }
+    await this.completeOAuthFromCallback(text);
+  } catch (err) {
+    this.toast(`读取剪贴板失败: ${err.message}`, 'error');
+  }
+};
+
+App.completeOAuthFromCallback = async function(callbackUrlOverride = '', options = {}) {
   const input = document.getElementById('oauth-callback-url');
   const button = document.getElementById('btn-complete-oauth');
-  const callbackUrl = String(input?.value || '').trim();
+  const clipboardButton = document.getElementById('btn-complete-oauth-clipboard');
+  const callbackUrl = this.extractOAuthCallbackUrl(callbackUrlOverride || input?.value || '');
 
   if (!callbackUrl) {
     this.toast('请先粘贴完整的回调链接', 'warning');
@@ -5100,15 +5184,12 @@ App.completeOAuthFromCallback = async function() {
     return;
   }
 
-  if (!/^https?:\/\/localhost:1455\/auth\/callback/i.test(callbackUrl)) {
-    this.toast('请粘贴完整的 localhost:1455/auth/callback 回调地址', 'warning');
-    input?.focus();
-    return;
-  }
-
   if (button) {
     button.disabled = true;
-    button.textContent = '正在完成授权...';
+    button.textContent = options.automatic ? '自动完成中...' : '正在完成授权...';
+  }
+  if (clipboardButton) {
+    clipboardButton.disabled = true;
   }
 
   try {
@@ -5125,6 +5206,9 @@ App.completeOAuthFromCallback = async function() {
     if (button) {
       button.disabled = false;
       button.textContent = '完成授权';
+    }
+    if (clipboardButton) {
+      clipboardButton.disabled = false;
     }
   }
 };
