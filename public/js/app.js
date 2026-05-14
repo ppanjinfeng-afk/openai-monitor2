@@ -1120,7 +1120,7 @@ const App = {
 
     if (note) {
       note.textContent = enabled
-        ? '关闭后 https://www.penqda.com/buy 会显示维护中，localhost:3000 不受影响。'
+        ? '关闭后 https://2人team.com/buy 会显示维护中，localhost:3000 不受影响。'
         : '当前公网域名入口已关闭，访问会显示维护中；localhost:3000 仍然正常。';
     }
   },

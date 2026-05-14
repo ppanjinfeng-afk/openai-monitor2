@@ -113,7 +113,7 @@ function getPublicBaseUrl() {
     return configured.replace(/\/+$/, '');
   }
 
-  return 'https://penqda.com';
+  return 'https://xn--2team-cd2h.com';
 }
 
 function isOfficialAlipayPagePayEnabled() {

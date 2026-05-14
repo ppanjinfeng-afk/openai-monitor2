@@ -9,6 +9,7 @@ APP_BRANCH="${APP_BRANCH:-main}"
 START_SERVICES="${START_SERVICES:-true}"
 CERTBOT_DOMAINS="${CERTBOT_DOMAINS:-}"
 CERTBOT_EMAIL="${CERTBOT_EMAIL:-}"
+PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-https://xn--2team-cd2h.com}"
 PUBLIC_TUNNEL_ENABLED="${PUBLIC_TUNNEL_ENABLED:-}"
 ADMIN_BASIC_AUTH_ENABLED="${ADMIN_BASIC_AUTH_ENABLED:-}"
 ADMIN_BASIC_AUTH_USER="${ADMIN_BASIC_AUTH_USER:-}"
@@ -19,7 +20,7 @@ PUPPETEER_CACHE_DIR="${PUPPETEER_CACHE_DIR:-$APP_HOME/.cache/puppeteer}"
 
 if [[ -z "$REPO_URL" ]]; then
   echo "Usage: bash bootstrap-ubuntu.sh <repo-url> [app-dir]"
-  echo "Optional env: APP_BRANCH, CERTBOT_DOMAINS, CERTBOT_EMAIL, ADMIN_BASIC_AUTH_USER, ADMIN_BASIC_AUTH_PASS"
+  echo "Optional env: APP_BRANCH, CERTBOT_DOMAINS, CERTBOT_EMAIL, PUBLIC_BASE_URL, ADMIN_BASIC_AUTH_USER, ADMIN_BASIC_AUTH_PASS"
   exit 1
 fi
 
@@ -114,6 +115,7 @@ mkdir -p /etc/systemd/system/openai-monitor.service.d
 {
   echo "[Service]"
   echo "Environment=PUPPETEER_CACHE_DIR=$PUPPETEER_CACHE_DIR"
+  echo "Environment=PUBLIC_BASE_URL=$PUBLIC_BASE_URL"
 } > /etc/systemd/system/openai-monitor.service.d/runtime.conf
 systemctl daemon-reload
 
