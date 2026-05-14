@@ -2,6 +2,7 @@
 
 Ubuntu VPS 部署建议直接看：
 
+- [deploy/openai-monitor2-vps-commands.md](./deploy/openai-monitor2-vps-commands.md)
 - [docs/deploy-ubuntu-vps.md](./docs/deploy-ubuntu-vps.md)
 
 ## GitHub 一键拉取思路

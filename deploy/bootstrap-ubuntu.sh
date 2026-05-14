@@ -5,27 +5,40 @@ REPO_URL="${1:-}"
 APP_DIR="${2:-/opt/openai-monitor}"
 APP_USER="${SUDO_USER:-${USER:-root}}"
 NODE_MAJOR="${NODE_MAJOR:-20}"
+APP_BRANCH="${APP_BRANCH:-main}"
+START_SERVICES="${START_SERVICES:-true}"
+CERTBOT_DOMAINS="${CERTBOT_DOMAINS:-}"
+CERTBOT_EMAIL="${CERTBOT_EMAIL:-}"
+PUBLIC_TUNNEL_ENABLED="${PUBLIC_TUNNEL_ENABLED:-}"
+ADMIN_BASIC_AUTH_ENABLED="${ADMIN_BASIC_AUTH_ENABLED:-}"
+ADMIN_BASIC_AUTH_USER="${ADMIN_BASIC_AUTH_USER:-}"
+ADMIN_BASIC_AUTH_PASS="${ADMIN_BASIC_AUTH_PASS:-}"
+APP_HOME="$(getent passwd "$APP_USER" | awk -F: '{print $6}' || true)"
+APP_HOME="${APP_HOME:-/home/$APP_USER}"
+PUPPETEER_CACHE_DIR="${PUPPETEER_CACHE_DIR:-$APP_HOME/.cache/puppeteer}"
 
 if [[ -z "$REPO_URL" ]]; then
   echo "Usage: bash bootstrap-ubuntu.sh <repo-url> [app-dir]"
+  echo "Optional env: APP_BRANCH, CERTBOT_DOMAINS, CERTBOT_EMAIL, ADMIN_BASIC_AUTH_USER, ADMIN_BASIC_AUTH_PASS"
   exit 1
 fi
 
 export DEBIAN_FRONTEND=noninteractive
 
-echo "[1/7] Installing system packages..."
+echo "[1/8] Installing system packages..."
 apt-get update
 apt-get install -y curl git unzip build-essential python3 nginx ca-certificates certbot python3-certbot-nginx
 
-if ! command -v node >/dev/null 2>&1; then
-  echo "[2/7] Installing Node.js ${NODE_MAJOR}..."
+CURRENT_NODE_MAJOR="$(node -p "process.versions.node.split('.')[0]" 2>/dev/null || echo 0)"
+if (( CURRENT_NODE_MAJOR < NODE_MAJOR )); then
+  echo "[2/8] Installing Node.js ${NODE_MAJOR}..."
   curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash -
   apt-get install -y nodejs
 else
-  echo "[2/7] Node.js already installed: $(node -v)"
+  echo "[2/8] Node.js already installed: $(node -v)"
 fi
 
-echo "[3/7] Installing Puppeteer runtime libraries..."
+echo "[3/8] Installing Puppeteer runtime libraries..."
 apt-get install -y \
   fonts-liberation \
   libasound2t64 \
@@ -45,53 +58,117 @@ apt-get install -y \
   libxrandr2 \
   xdg-utils
 
-echo "[4/7] Cloning or updating project..."
+echo "[4/8] Cloning or updating project branch: $APP_BRANCH"
 mkdir -p "$APP_DIR"
 
 if [[ -d "$APP_DIR/.git" ]]; then
   git -C "$APP_DIR" fetch --all --prune
-  git -C "$APP_DIR" reset --hard origin/main
+  git -C "$APP_DIR" reset --hard "origin/$APP_BRANCH"
 else
   rm -rf "$APP_DIR"
-  git clone "$REPO_URL" "$APP_DIR"
+  git clone --branch "$APP_BRANCH" "$REPO_URL" "$APP_DIR"
 fi
 
 mkdir -p "$APP_DIR/data"
+chown -R "$APP_USER":"$APP_USER" "$APP_DIR"
 
-echo "[5/7] Installing npm dependencies..."
+echo "[5/8] Installing npm dependencies..."
 cd "$APP_DIR"
-npm install
-npx puppeteer browsers install chrome || true
+if [[ -f package-lock.json ]]; then
+  npm ci --omit=dev
+else
+  npm install --omit=dev
+fi
+mkdir -p "$PUPPETEER_CACHE_DIR"
+PUPPETEER_CACHE_DIR="$PUPPETEER_CACHE_DIR" npx puppeteer browsers install chrome || true
+chown -R "$APP_USER":"$APP_USER" "$APP_HOME/.cache" 2>/dev/null || true
 
-echo "[6/7] Installing systemd services..."
+if [[ -n "$PUBLIC_TUNNEL_ENABLED" ]]; then
+  echo "Setting public_tunnel_enabled=$PUBLIC_TUNNEL_ENABLED"
+  PUBLIC_TUNNEL_ENABLED="$PUBLIC_TUNNEL_ENABLED" node - <<'NODE'
+const db = require('./db');
+db.prepare(`
+  INSERT INTO settings (key, value)
+  VALUES ('public_tunnel_enabled', ?)
+  ON CONFLICT(key) DO UPDATE SET value = excluded.value
+`).run(process.env.PUBLIC_TUNNEL_ENABLED);
+NODE
+fi
+
+echo "[6/8] Installing systemd services..."
 cp "$APP_DIR/deploy/systemd/openai-monitor.service" /etc/systemd/system/openai-monitor.service
 cp "$APP_DIR/deploy/systemd/openai-monitor-healthcheck.service" /etc/systemd/system/openai-monitor-healthcheck.service
 cp "$APP_DIR/deploy/systemd/openai-monitor-healthcheck.timer" /etc/systemd/system/openai-monitor-healthcheck.timer
 cp "$APP_DIR/deploy/systemd/openai-monitor-cdk-expire.service" /etc/systemd/system/openai-monitor-cdk-expire.service
 cp "$APP_DIR/deploy/systemd/openai-monitor-cdk-expire.timer" /etc/systemd/system/openai-monitor-cdk-expire.timer
 chmod +x "$APP_DIR/deploy/scripts/openai-monitor-healthcheck.sh"
+mkdir -p /etc/systemd/system/openai-monitor.service.d
+{
+  echo "[Service]"
+  echo "Environment=PUPPETEER_CACHE_DIR=$PUPPETEER_CACHE_DIR"
+  if [[ -n "$ADMIN_BASIC_AUTH_ENABLED" ]]; then
+    echo "Environment=ADMIN_BASIC_AUTH_ENABLED=$ADMIN_BASIC_AUTH_ENABLED"
+  fi
+  if [[ -n "$ADMIN_BASIC_AUTH_USER" ]]; then
+    echo "Environment=ADMIN_BASIC_AUTH_USER=$ADMIN_BASIC_AUTH_USER"
+  fi
+  if [[ -n "$ADMIN_BASIC_AUTH_PASS" ]]; then
+    echo "Environment=ADMIN_BASIC_AUTH_PASS=$ADMIN_BASIC_AUTH_PASS"
+  fi
+} > /etc/systemd/system/openai-monitor.service.d/runtime.conf
 systemctl daemon-reload
-systemctl enable openai-monitor
-systemctl enable openai-monitor-healthcheck.timer
-systemctl enable openai-monitor-cdk-expire.timer
 
-echo "[7/7] Installing nginx config..."
+echo "[7/8] Installing nginx config..."
 cp "$APP_DIR/deploy/nginx/openai-monitor.conf" /etc/nginx/sites-available/openai-monitor.conf
+rm -f /etc/nginx/sites-enabled/default
 ln -sf /etc/nginx/sites-available/openai-monitor.conf /etc/nginx/sites-enabled/openai-monitor.conf
 nginx -t
+systemctl enable --now nginx
 systemctl reload nginx
 
-chown -R "$APP_USER":"$APP_USER" "$APP_DIR"
+if [[ "$START_SERVICES" == "true" ]]; then
+  systemctl enable --now openai-monitor
+  systemctl enable --now openai-monitor-healthcheck.timer
+  systemctl enable --now openai-monitor-cdk-expire.timer
+fi
+
+echo "[8/8] Optional HTTPS..."
+if [[ -n "$CERTBOT_DOMAINS" ]]; then
+  certbot_args=(--nginx --non-interactive --agree-tos --redirect)
+  if [[ -n "$CERTBOT_EMAIL" ]]; then
+    certbot_args+=(--email "$CERTBOT_EMAIL")
+  else
+    certbot_args+=(--register-unsafely-without-email)
+  fi
+
+  IFS=',' read -ra domains <<< "$CERTBOT_DOMAINS"
+  for domain in "${domains[@]}"; do
+    domain="$(echo "$domain" | xargs)"
+    if [[ -n "$domain" ]]; then
+      certbot_args+=(-d "$domain")
+    fi
+  done
+
+  certbot "${certbot_args[@]}"
+  nginx -t
+  systemctl reload nginx
+else
+  echo "Skipping HTTPS. Set CERTBOT_DOMAINS=example.com,www.example.com to enable it."
+fi
 
 echo
 echo "Done."
-echo "Next:"
-echo "1. Upload your database to: $APP_DIR/data/monitor.db"
-echo "2. Start services:"
+echo "Useful checks:"
+echo "   systemctl status openai-monitor --no-pager"
+echo "   systemctl status nginx --no-pager"
+echo "   curl http://127.0.0.1:3000/api/checks/status"
+echo
+echo "If you have an existing database, upload it to:"
+echo "   $APP_DIR/data/monitor.db"
+echo "Then restart:"
 echo "   systemctl restart openai-monitor"
-echo "   systemctl start openai-monitor-healthcheck.timer"
-echo "   systemctl start openai-monitor-cdk-expire.timer"
-echo "3. Check status:"
+echo
+echo "Service status:"
 echo "   systemctl status openai-monitor --no-pager"
 echo "   systemctl status openai-monitor-healthcheck.timer --no-pager"
 echo "   systemctl status openai-monitor-cdk-expire.timer --no-pager"
