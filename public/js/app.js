@@ -4369,7 +4369,7 @@ const App = {
     const summary = this.accountDeliveryItemsData?.summary || product || {};
     if (host) {
       host.innerHTML = [
-        Components.workspaceSummaryCard('库存总数', summary.totalCount || 0, 'neutral', '后台已录入的账号邮箱'),
+        Components.workspaceSummaryCard('库存总数', summary.totalCount || 0, 'neutral', '后台已录入的账号内容'),
         Components.workspaceSummaryCard('未售', summary.stockCount || 0, (summary.stockCount || 0) > 0 ? 'success' : 'neutral', '客户可购买的账号'),
         Components.workspaceSummaryCard('锁定中', summary.reservedCount || 0, (summary.reservedCount || 0) > 0 ? 'warning' : 'neutral', '已下单但未付款完成'),
         Components.workspaceSummaryCard('已售', summary.soldCount || 0, (summary.soldCount || 0) > 0 ? 'accent' : 'neutral', '已付款并交付的账号'),
@@ -4491,7 +4491,7 @@ const App = {
               </button>
             ` : ''}
             ${order.accountEmail ? `
-              <button class="action-btn tone-blue" title="复制交付邮箱" onclick="App.copyText(${Components.jsString(order.accountEmail || '')})">
+              <button class="action-btn tone-blue" title="复制交付内容" onclick="App.copyText(${Components.jsString(order.accountEmail || '')})">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
               </button>
             ` : ''}
@@ -4506,7 +4506,7 @@ const App = {
     const resultHost = document.getElementById('account-delivery-add-result');
     const emails = input?.value || '';
     if (!emails.trim()) {
-      this.toast('请输入要添加的邮箱', 'warning');
+      this.toast('请输入要添加的账号内容', 'warning');
       input?.focus();
       return;
     }
@@ -4552,10 +4552,10 @@ const App = {
     try {
       const result = await API.manualDeliverAccountDeliveryOrder(orderNo);
       await this.loadAccountDeliveryPage();
-      const email = result?.order?.accountEmail || '';
-      this.toast(email ? `已交付账号: ${email}` : '已交付账号', 'success');
-      if (email) {
-        await this.copyText(email);
+      const account = result?.order?.accountEmail || '';
+      this.toast(account ? `已交付账号: ${account}` : '已交付账号', 'success');
+      if (account) {
+        await this.copyText(account);
       }
     } catch (err) {
       this.toast(`确认收款失败: ${err.message}`, 'error');

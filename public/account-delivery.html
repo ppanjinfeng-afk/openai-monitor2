@@ -485,7 +485,7 @@
             <span class="badge">一单一个邮箱</span>
           </div>
           <h1>购买 GPT Business 2人席位账号</h1>
-          <p>提交订单后打开支付页面，付款确认后系统会自动显示交付邮箱。已售邮箱会从库存中锁定，不会重复卖给其他客户。</p>
+          <p>提交订单后打开支付页面，付款确认后系统会自动显示交付内容。已售账号会从库存中锁定，不会重复卖给其他客户。</p>
           <div class="price">
             <strong id="price-text">--</strong>
             <span>每个账号</span>
@@ -498,7 +498,7 @@
         <div class="flow">
           <div><b>1. 下单支付</b><span>填写接收邮箱并创建订单。</span></div>
           <div><b>2. 自动确认</b><span>付款回调后立即锁定已售。</span></div>
-          <div><b>3. 显示账号</b><span>页面自动显示交付邮箱。</span></div>
+          <div><b>3. 显示账号</b><span>页面自动显示交付内容。</span></div>
         </div>
       </aside>
 
@@ -550,7 +550,7 @@
           <strong>账号已交付</strong>
           <code class="account-value" id="account-email">--</code>
           <div class="actions">
-            <button class="secondary" type="button" id="btn-copy">复制邮箱</button>
+            <button class="secondary" type="button" id="btn-copy">复制内容</button>
           </div>
         </div>
 
@@ -836,7 +836,7 @@
       if (!email) return;
       await navigator.clipboard.writeText(email).catch(() => {});
       copyBtn.textContent = '已复制';
-      setTimeout(() => { copyBtn.textContent = '复制邮箱'; }, 1400);
+      setTimeout(() => { copyBtn.textContent = '复制内容'; }, 1400);
     });
 
     function renderLookupOrders(orders) {
@@ -853,7 +853,7 @@
           </div>
           <small>订单号：${escapeHtml(order.orderNo)}</small>
           <small>金额：${escapeHtml(order.amountText)}</small>
-          <small>交付邮箱：${escapeHtml(order.accountEmail || '-')}</small>
+          <small>交付内容：${escapeHtml(order.accountEmail || '-')}</small>
         </div>
       `).join('');
 

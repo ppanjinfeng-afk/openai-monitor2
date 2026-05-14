@@ -1338,8 +1338,8 @@
                   <div class="panel-header"><h2>添加邮箱库存</h2></div>
                   <div class="panel-body">
                     <div class="form-group">
-                      <label for="account-delivery-emails">邮箱列表</label>
-                      <textarea id="account-delivery-emails" class="form-input" rows="7" placeholder="每行一个邮箱"></textarea>
+                      <label for="account-delivery-emails">账号内容列表</label>
+                      <textarea id="account-delivery-emails" class="form-input" rows="7" placeholder="每行一条，任意格式都可以"></textarea>
                     </div>
                     <div class="form-actions">
                       <button class="btn btn-primary" id="btn-account-delivery-add">添加库存</button>
@@ -1379,7 +1379,7 @@
                     </div>
                     <div class="dashboard-alert-item success">
                       <div class="dashboard-alert-head"><strong>防重复售卖</strong></div>
-                      <div class="dashboard-alert-detail">已售邮箱不会再进入可售库存，其他客户不会买到同一个邮箱。</div>
+                      <div class="dashboard-alert-detail">已售账号不会再进入可售库存，其他客户不会买到同一条内容。</div>
                     </div>
                   </div>
                 </div>
@@ -1413,7 +1413,7 @@
                 <table class="accounts-table hidden" id="account-delivery-items-table">
                   <thead>
                     <tr>
-                      <th>邮箱</th>
+                      <th>账号内容</th>
                       <th>状态</th>
                       <th>买家 / 订单</th>
                       <th>时间</th>
@@ -1422,7 +1422,7 @@
                   </thead>
                   <tbody id="account-delivery-items-tbody"></tbody>
                 </table>
-                <div class="empty-state" id="account-delivery-items-empty"><p>暂无账号库存，先添加邮箱。</p></div>
+                <div class="empty-state" id="account-delivery-items-empty"><p>暂无账号库存，先添加账号内容。</p></div>
                 <div class="pagination" id="account-delivery-items-pagination"></div>
               </div>
             </div>
@@ -1439,7 +1439,7 @@
                       <th>买家</th>
                       <th>状态</th>
                       <th>金额</th>
-                      <th>交付邮箱</th>
+                      <th>交付内容</th>
                       <th>时间</th>
                       <th>操作</th>
                     </tr>

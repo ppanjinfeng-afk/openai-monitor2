@@ -396,21 +396,29 @@ function deliverPaidOrder(orderNo, paymentInfo = {}) {
   return deliver();
 }
 
-function parseInventoryEmails(input) {
-  const rawItems = Array.isArray(input) ? input : String(input || '').split(/[\r\n,;，；\s]+/);
+function normalizeInventoryItem(value) {
+  return String(value || '')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .trim();
+}
+
+function parseInventoryItems(input) {
+  const rawItems = Array.isArray(input)
+    ? input
+    : String(input || '').split(/\r?\n/);
   const seen = new Set();
-  const emails = [];
+  const items = [];
 
   for (const raw of rawItems) {
-    const email = normalizeEmail(raw);
-    if (!email || seen.has(email)) {
+    const item = normalizeInventoryItem(raw);
+    if (!item || seen.has(item)) {
       continue;
     }
-    seen.add(email);
-    emails.push(email);
+    seen.add(item);
+    items.push(item);
   }
 
-  return emails;
+  return items;
 }
 
 router.get('/product', (req, res) => {
@@ -629,14 +637,9 @@ router.get('/items', (req, res) => {
 });
 
 router.post('/items', (req, res) => {
-  const emails = parseInventoryEmails(req.body.emails || req.body.email || req.body.items || '');
-  if (!emails.length) {
-    return res.status(400).json({ error: '请输入要添加的邮箱' });
-  }
-
-  const invalid = emails.filter(email => !isValidEmail(email));
-  if (invalid.length) {
-    return res.status(400).json({ error: `邮箱格式不正确：${invalid.slice(0, 5).join(', ')}` });
+  const items = parseInventoryItems(req.body.items || req.body.emails || req.body.email || '');
+  if (!items.length) {
+    return res.status(400).json({ error: '请输入要添加的账号内容' });
   }
 
   const insert = db.prepare(`
@@ -646,12 +649,12 @@ router.post('/items', (req, res) => {
   let inserted = 0;
   const skipped = [];
   const insertAll = db.transaction(() => {
-    for (const email of emails) {
-      const result = insert.run(email);
+    for (const item of items) {
+      const result = insert.run(item);
       if (result.changes) {
         inserted += 1;
       } else {
-        skipped.push(email);
+        skipped.push(item);
       }
     }
   });
