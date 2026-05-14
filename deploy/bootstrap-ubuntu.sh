@@ -17,10 +17,12 @@ ADMIN_BASIC_AUTH_PASS="${ADMIN_BASIC_AUTH_PASS:-}"
 APP_HOME="$(getent passwd "$APP_USER" | awk -F: '{print $6}' || true)"
 APP_HOME="${APP_HOME:-/home/$APP_USER}"
 PUPPETEER_CACHE_DIR="${PUPPETEER_CACHE_DIR:-$APP_HOME/.cache/puppeteer}"
+CDK_TEAM_WORKER_CONCURRENCY="${CDK_TEAM_WORKER_CONCURRENCY:-3}"
+BROWSER_TASK_CONCURRENCY="${BROWSER_TASK_CONCURRENCY:-3}"
 
 if [[ -z "$REPO_URL" ]]; then
   echo "Usage: bash bootstrap-ubuntu.sh <repo-url> [app-dir]"
-  echo "Optional env: APP_BRANCH, CERTBOT_DOMAINS, CERTBOT_EMAIL, PUBLIC_BASE_URL, ADMIN_BASIC_AUTH_USER, ADMIN_BASIC_AUTH_PASS"
+  echo "Optional env: APP_BRANCH, CERTBOT_DOMAINS, CERTBOT_EMAIL, PUBLIC_BASE_URL, CDK_TEAM_WORKER_CONCURRENCY, BROWSER_TASK_CONCURRENCY, ADMIN_BASIC_AUTH_USER, ADMIN_BASIC_AUTH_PASS"
   exit 1
 fi
 
@@ -116,6 +118,8 @@ mkdir -p /etc/systemd/system/openai-monitor.service.d
   echo "[Service]"
   echo "Environment=PUPPETEER_CACHE_DIR=$PUPPETEER_CACHE_DIR"
   echo "Environment=PUBLIC_BASE_URL=$PUBLIC_BASE_URL"
+  echo "Environment=CDK_TEAM_WORKER_CONCURRENCY=$CDK_TEAM_WORKER_CONCURRENCY"
+  echo "Environment=BROWSER_TASK_CONCURRENCY=$BROWSER_TASK_CONCURRENCY"
 } > /etc/systemd/system/openai-monitor.service.d/runtime.conf
 systemctl daemon-reload
 
