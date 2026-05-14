@@ -369,6 +369,13 @@ const API = {
     });
   },
 
+  updateAccountDeliveryItemStatus(id, status) {
+    return this.request(`/api/account-delivery/items/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  },
+
   getAccountDeliveryOrders(params = {}) {
     const qs = new URLSearchParams(params).toString();
     return this.request(`/api/account-delivery/orders${qs ? `?${qs}` : ''}`);

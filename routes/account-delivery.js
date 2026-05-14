@@ -693,6 +693,73 @@ router.post('/items', (req, res) => {
   });
 });
 
+router.patch('/items/:id(\\d+)/status', (req, res) => {
+  const id = Number.parseInt(req.params.id, 10);
+  const status = String(req.body.status || '').trim().toLowerCase();
+  if (!['available', 'sold'].includes(status)) {
+    return res.status(400).json({ error: '只能设置为未售或已售' });
+  }
+
+  const updateStatus = db.transaction(() => {
+    const item = db.prepare('SELECT * FROM account_delivery_items WHERE id = ?').get(id);
+    if (!item) {
+      const err = new Error('记录不存在');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    if (item.status === 'reserved' && item.reserved_order_no) {
+      db.prepare(`
+        UPDATE account_delivery_orders
+        SET status = 'failed',
+            account_item_id = NULL,
+            updated_at = datetime('now')
+        WHERE order_no = ?
+          AND status = 'pending'
+      `).run(item.reserved_order_no);
+    }
+
+    if (status === 'available') {
+      db.prepare(`
+        UPDATE account_delivery_items
+        SET status = 'available',
+            buyer_email = '',
+            sold_order_no = '',
+            reserved_order_no = '',
+            reserved_until = NULL,
+            sold_at = NULL,
+            updated_at = datetime('now')
+        WHERE id = ?
+      `).run(id);
+    } else {
+      db.prepare(`
+        UPDATE account_delivery_items
+        SET status = 'sold',
+            buyer_email = '',
+            sold_order_no = '',
+            reserved_order_no = '',
+            reserved_until = NULL,
+            sold_at = COALESCE(sold_at, datetime('now')),
+            updated_at = datetime('now')
+        WHERE id = ?
+      `).run(id);
+    }
+
+    return db.prepare('SELECT * FROM account_delivery_items WHERE id = ?').get(id);
+  });
+
+  try {
+    const item = updateStatus();
+    res.json({
+      message: status === 'available' ? '已设为未售' : '已设为已售',
+      item,
+      summary: getStats(),
+    });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
+});
+
 router.delete('/items/:id(\\d+)', (req, res) => {
   const id = Number.parseInt(req.params.id, 10);
   const item = db.prepare('SELECT * FROM account_delivery_items WHERE id = ?').get(id);

@@ -4431,6 +4431,12 @@ const App = {
           </td>
           <td>
             <div class="action-btns">
+              ${item.status !== 'sold' ? `
+                <button class="member-inline-btn warn" title="手动改为已售" onclick="App.updateAccountDeliveryItemStatus(${item.id}, 'sold')">设已售</button>
+              ` : ''}
+              ${item.status !== 'available' ? `
+                <button class="member-inline-btn accent" title="手动改为未售" onclick="App.updateAccountDeliveryItemStatus(${item.id}, 'available')">设未售</button>
+              ` : ''}
               <button class="action-btn danger" title="删除" onclick="App.deleteAccountDeliveryItem(${item.id})">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
               </button>
@@ -4546,6 +4552,24 @@ const App = {
       this.toast('账号库存已删除', 'success');
     } catch (err) {
       this.toast(`删除账号库存失败: ${err.message}`, 'error');
+    }
+  },
+
+  async updateAccountDeliveryItemStatus(id, status) {
+    const label = status === 'sold' ? '已售' : '未售';
+    const message = status === 'sold'
+      ? '确定把这个账号手动改为已售吗？改为已售后，客户不会再购买到这个账号。'
+      : '确定把这个账号手动改为未售吗？改为未售后，它会重新进入可购买库存。';
+    if (!confirm(message)) {
+      return;
+    }
+
+    try {
+      await API.updateAccountDeliveryItemStatus(id, status);
+      await this.loadAccountDeliveryPage();
+      this.toast(`账号库存已改为${label}`, 'success');
+    } catch (err) {
+      this.toast(`修改账号库存状态失败: ${err.message}`, 'error');
     }
   },
 
