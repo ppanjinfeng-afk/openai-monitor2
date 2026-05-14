@@ -102,20 +102,6 @@
       transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
     }
 
-    .product-card::after {
-      content: "";
-      position: absolute;
-      top: 28px;
-      right: 24px;
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.12)),
-        currentColor;
-      opacity: 0.22;
-    }
-
     .product-card:hover {
       transform: translateY(-2px);
       border-color: rgba(126, 231, 226, 0.64);
@@ -124,7 +110,6 @@
 
     .product-copy {
       width: 100%;
-      padding-right: 60px;
     }
 
     .product-copy strong {
