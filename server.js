@@ -9,13 +9,13 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const BIND_HOST = process.env.BIND_HOST || '127.0.0.1';
 const PUBLIC_HOSTS = new Set(
-  (process.env.PUBLIC_HOSTS || 'penqda.com,www.penqda.com')
+  (process.env.PUBLIC_HOSTS || 'xn--2team-cd2h.com,www.xn--2team-cd2h.com')
     .split(',')
     .map(host => host.trim().toLowerCase())
     .filter(Boolean)
 );
 const ACTIVATION_ONLY_PUBLIC_HOSTS = new Set(
-  (process.env.ACTIVATION_ONLY_PUBLIC_HOSTS || 'panqda.com,www.panqda.com')
+  (process.env.ACTIVATION_ONLY_PUBLIC_HOSTS || 'activate.xn--2team-cd2h.com')
     .split(',')
     .map(host => host.trim().toLowerCase())
     .filter(Boolean)

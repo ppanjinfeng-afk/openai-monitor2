@@ -111,7 +111,7 @@ curl -I http://127.0.0.1:3000/buy
 
 ```bash
 sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d penqda.com -d www.penqda.com
+sudo certbot --nginx -d xn--2team-cd2h.com -d www.xn--2team-cd2h.com -d activate.xn--2team-cd2h.com -d admin.xn--2team-cd2h.com
 ```
 
 ## 11. 更新项目

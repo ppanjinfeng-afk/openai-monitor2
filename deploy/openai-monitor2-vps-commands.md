@@ -109,6 +109,14 @@ sudo systemctl reload nginx
 
 注意：`deploy/nginx/openai-monitor.conf` 是基础 HTTP 配置；每次复制它之后都要重跑上面的 `certbot` 三条命令，把 HTTPS 配置重新写回 nginx。
 
+如果从旧域名迁移过来，修复历史待支付订单里的旧支付回调域名：
+
+```bash
+cd /opt/openai-monitor
+sudo env PUBLIC_BASE_URL='https://xn--2team-cd2h.com' node deploy/scripts/repair-payment-base-url.js
+sudo systemctl restart openai-monitor
+```
+
 ## 4. 设置后台账号密码
 
 在 VPS 上运行。中文用户名也支持：
