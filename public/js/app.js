@@ -4415,7 +4415,17 @@ const App = {
               <button class="member-inline-btn" onclick="App.copyText(${Components.jsString(item.email || '')})">复制</button>
             </div>
           </td>
-          <td>${this.cdkPill(this.accountDeliveryStatusLabel(item.status), this.accountDeliveryStatusTone(item.status))}</td>
+          <td>
+            <div class="action-btns">
+              ${this.cdkPill(this.accountDeliveryStatusLabel(item.status), this.accountDeliveryStatusTone(item.status))}
+              ${item.status !== 'sold' ? `
+                <button class="member-inline-btn warn" title="手动改为已售" onclick="App.updateAccountDeliveryItemStatus(${item.id}, 'sold')">设已售</button>
+              ` : ''}
+              ${item.status !== 'available' ? `
+                <button class="member-inline-btn accent" title="手动改为未售" onclick="App.updateAccountDeliveryItemStatus(${item.id}, 'available')">设未售</button>
+              ` : ''}
+            </div>
+          </td>
           <td>
             <div class="stack-col-sm">
               <span>${Components.escapeHtml(item.buyer_email || '-')}</span>
@@ -4431,12 +4441,6 @@ const App = {
           </td>
           <td>
             <div class="action-btns">
-              ${item.status !== 'sold' ? `
-                <button class="member-inline-btn warn" title="手动改为已售" onclick="App.updateAccountDeliveryItemStatus(${item.id}, 'sold')">设已售</button>
-              ` : ''}
-              ${item.status !== 'available' ? `
-                <button class="member-inline-btn accent" title="手动改为未售" onclick="App.updateAccountDeliveryItemStatus(${item.id}, 'available')">设未售</button>
-              ` : ''}
               <button class="action-btn danger" title="删除" onclick="App.deleteAccountDeliveryItem(${item.id})">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
               </button>
