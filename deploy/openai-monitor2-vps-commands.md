@@ -31,7 +31,13 @@ curl -fsSL https://raw.githubusercontent.com/ppanjinfeng-afk/openai-monitor2/mai
       PUBLIC_TUNNEL_ENABLED=true \
       PUBLIC_BASE_URL='https://xn--2team-cd2h.com' \
       CDK_TEAM_WORKER_CONCURRENCY=3 \
-      BROWSER_TASK_CONCURRENCY=3 \
+      BROWSER_TASK_CONCURRENCY=5 \
+      BROWSER_MAINTENANCE_CONCURRENCY=2 \
+      CDK_TEAM_INVITE_TIMEOUT_MS=300000 \
+      OVERFLOW_REBALANCE_WORKSPACE_CONCURRENCY=2 \
+      MEMBER_REMOVAL_WORKSPACE_CONCURRENCY=3 \
+      MEMBER_REMOVAL_MEMBER_CONCURRENCY=6 \
+      MEMBER_CLEANUP_SYNC_CONCURRENCY=3 \
       ADMIN_BASIC_AUTH_ENABLED=true \
       ADMIN_BASIC_AUTH_USER='派大星' \
       ADMIN_BASIC_AUTH_PASS="$ADMIN_PASS" \
@@ -98,7 +104,7 @@ sudo cp deploy/systemd/openai-monitor-cdk-expire.service /etc/systemd/system/ope
 sudo cp deploy/systemd/openai-monitor-cdk-expire.timer /etc/systemd/system/openai-monitor-cdk-expire.timer
 sudo cp deploy/nginx/openai-monitor.conf /etc/nginx/sites-available/openai-monitor.conf
 sudo mkdir -p /etc/systemd/system/openai-monitor.service.d
-printf '[Service]\nEnvironment=PUPPETEER_CACHE_DIR=/home/ubuntu/.cache/puppeteer\nEnvironment=PUBLIC_BASE_URL=https://xn--2team-cd2h.com\nEnvironment=CDK_TEAM_WORKER_CONCURRENCY=3\nEnvironment=BROWSER_TASK_CONCURRENCY=3\n' | sudo tee /etc/systemd/system/openai-monitor.service.d/runtime.conf >/dev/null
+printf '[Service]\nEnvironment=PUPPETEER_CACHE_DIR=/home/ubuntu/.cache/puppeteer\nEnvironment=PUBLIC_BASE_URL=https://xn--2team-cd2h.com\nEnvironment=CDK_TEAM_WORKER_CONCURRENCY=3\nEnvironment=BROWSER_TASK_CONCURRENCY=5\nEnvironment=BROWSER_MAINTENANCE_CONCURRENCY=2\nEnvironment=CDK_TEAM_INVITE_TIMEOUT_MS=300000\nEnvironment=OVERFLOW_REBALANCE_WORKSPACE_CONCURRENCY=2\nEnvironment=MEMBER_REMOVAL_WORKSPACE_CONCURRENCY=3\nEnvironment=MEMBER_REMOVAL_MEMBER_CONCURRENCY=6\nEnvironment=MEMBER_CLEANUP_SYNC_CONCURRENCY=3\n' | sudo tee /etc/systemd/system/openai-monitor.service.d/runtime.conf >/dev/null
 sudo systemctl daemon-reload
 sudo nginx -t
 sudo certbot --nginx --non-interactive --agree-tos --redirect --register-unsafely-without-email -d xn--2team-cd2h.com -d www.xn--2team-cd2h.com

@@ -14,7 +14,13 @@ Environment=ACTIVATION_ONLY_PUBLIC_HOSTS=activate.xn--2team-cd2h.com
 Environment=PUBLIC_BASE_URL=https://xn--2team-cd2h.com
 Environment=PUPPETEER_CACHE_DIR=/home/ubuntu/.cache/puppeteer
 Environment=CDK_TEAM_WORKER_CONCURRENCY=3
-Environment=BROWSER_TASK_CONCURRENCY=3
+Environment=BROWSER_TASK_CONCURRENCY=5
+Environment=BROWSER_MAINTENANCE_CONCURRENCY=2
+Environment=CDK_TEAM_INVITE_TIMEOUT_MS=300000
+Environment=OVERFLOW_REBALANCE_WORKSPACE_CONCURRENCY=2
+Environment=MEMBER_REMOVAL_WORKSPACE_CONCURRENCY=3
+Environment=MEMBER_REMOVAL_MEMBER_CONCURRENCY=6
+Environment=MEMBER_CLEANUP_SYNC_CONCURRENCY=3
 # For remote admin access on port 3000, change BIND_HOST to 0.0.0.0
 # and enable the basic auth credentials below.
 # Environment=ADMIN_BASIC_AUTH_ENABLED=true
