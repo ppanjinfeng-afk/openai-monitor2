@@ -38,7 +38,7 @@
     }
 
     main {
-      width: min(880px, 100%);
+      width: min(1120px, 100%);
       padding: clamp(28px, 5vw, 54px);
       border: 1px solid var(--panel-border);
       border-radius: 8px;
@@ -79,7 +79,7 @@
 
     .actions {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 16px;
       margin-top: 36px;
     }
@@ -158,12 +158,33 @@
       box-shadow: 0 14px 34px rgba(244, 199, 107, 0.28);
     }
 
+    .two-seat .enter-button {
+      background: var(--coral);
+      box-shadow: 0 10px 28px rgba(255, 143, 112, 0.2);
+    }
+
+    .two-seat .enter-button:hover,
+    .two-seat .enter-button:focus-visible {
+      background: #ffa98f;
+      box-shadow: 0 14px 34px rgba(255, 143, 112, 0.28);
+    }
+
     .monthly {
       color: var(--cyan);
     }
 
     .daily {
       color: var(--gold);
+    }
+
+    .two-seat {
+      color: var(--coral);
+    }
+
+    @media (max-width: 920px) {
+      .actions {
+        grid-template-columns: 1fr;
+      }
     }
 
     @media (max-width: 680px) {
@@ -178,10 +199,6 @@
         flex-direction: column;
         justify-content: center;
         padding: 28px 20px;
-      }
-
-      .actions {
-        grid-template-columns: 1fr;
       }
 
       .product-card {
@@ -209,12 +226,19 @@
         </div>
         <a class="enter-button" id="daily-link" href="https://xn--2team-cd2h.com" rel="noopener">进入</a>
       </article>
+      <article class="product-card two-seat">
+        <div class="product-copy">
+          <strong>GPT Business 2人席位账号</strong>
+        </div>
+        <a class="enter-button" id="two-seat-link" href="https://www.penqda.com/" rel="noopener">进入</a>
+      </article>
     </div>
   </main>
 
   <script>
     const monthlyLink = document.getElementById('monthly-link');
     const dailyLink = document.getElementById('daily-link');
+    const twoSeatLink = document.getElementById('two-seat-link');
 
     fetch('/api/public/business-links', { cache: 'no-store' })
       .then((response) => response.ok ? response.json() : null)
@@ -222,6 +246,7 @@
         if (!links) return;
         if (typeof links.monthly === 'string' && links.monthly) monthlyLink.href = links.monthly;
         if (typeof links.daily === 'string' && links.daily) dailyLink.href = links.daily;
+        if (typeof links.twoSeat === 'string' && links.twoSeat) twoSeatLink.href = links.twoSeat;
       })
       .catch(() => {});
   </script>

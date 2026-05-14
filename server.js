@@ -96,6 +96,10 @@ function getBusinessProductLinks() {
       getSettingValue('public_business_daily_url', process.env.PUBLIC_BUSINESS_DAILY_URL || 'https://xn--2team-cd2h.com'),
       'https://xn--2team-cd2h.com'
     ),
+    twoSeat: normalizePublicLink(
+      getSettingValue('public_business_two_seat_url', process.env.PUBLIC_BUSINESS_TWO_SEAT_URL || 'https://www.penqda.com/'),
+      'https://www.penqda.com/'
+    ),
   };
 }
 
