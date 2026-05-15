@@ -26,6 +26,12 @@ const ACCOUNT_DELIVERY_PUBLIC_HOSTS = new Set(
     .map(host => host.trim().toLowerCase())
     .filter(Boolean)
 );
+const ACCOUNT_CODE_PUBLIC_HOSTS = new Set(
+  (process.env.ACCOUNT_CODE_PUBLIC_HOSTS || 'code.xn--2team-cd2h.com,acode.xn--2team-cd2h.com,a-code.xn--2team-cd2h.com')
+    .split(',')
+    .map(host => host.trim().toLowerCase())
+    .filter(Boolean)
+);
 const ACTIVATION_ONLY_PUBLIC_HOSTS = new Set(
   (process.env.ACTIVATION_ONLY_PUBLIC_HOSTS || 'activate.xn--2team-cd2h.com')
     .split(',')
@@ -36,6 +42,7 @@ const ALL_PUBLIC_HOSTS = new Set([
   ...PUBLIC_HOSTS,
   ...BUSINESS_PUBLIC_HOSTS,
   ...ACCOUNT_DELIVERY_PUBLIC_HOSTS,
+  ...ACCOUNT_CODE_PUBLIC_HOSTS,
   ...ACTIVATION_ONLY_PUBLIC_HOSTS,
 ]);
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
@@ -70,6 +77,11 @@ function isBusinessPublicHost(req) {
 function isAccountDeliveryPublicHost(req) {
   const hostname = String(req.hostname || '').toLowerCase();
   return ACCOUNT_DELIVERY_PUBLIC_HOSTS.has(hostname);
+}
+
+function isAccountCodePublicHost(req) {
+  const hostname = String(req.hostname || '').toLowerCase();
+  return ACCOUNT_CODE_PUBLIC_HOSTS.has(hostname);
 }
 
 function isAllowedCorsOrigin(origin) {
@@ -643,7 +655,7 @@ function isAllowedAccountDeliveryPublicRequest(req) {
   const pathOnly = req.path;
   const isReadMethod = req.method === 'GET' || req.method === 'HEAD';
 
-  if (isReadMethod && ['/', '/account-delivery', '/account-delivery.html', '/email-code', '/email-code.html', '/favicon.ico'].includes(pathOnly)) {
+  if (isReadMethod && ['/', '/account-delivery', '/account-delivery.html', '/email-code', '/email-code.html', '/a-code', '/a-code.html', '/favicon.ico'].includes(pathOnly)) {
     return true;
   }
 
@@ -685,9 +697,36 @@ function isAllowedAccountDeliveryPublicRequest(req) {
   return false;
 }
 
+function isAllowedAccountCodePublicRequest(req) {
+  const pathOnly = req.path;
+  const isReadMethod = req.method === 'GET' || req.method === 'HEAD';
+
+  if (isReadMethod && ['/', '/email-code', '/email-code.html', '/a-code', '/a-code.html', '/favicon.ico'].includes(pathOnly)) {
+    return true;
+  }
+
+  if (isReadMethod && pathOnly.startsWith('/assets/')) {
+    return true;
+  }
+
+  if (req.method === 'POST' && pathOnly === '/api/account-delivery/query-by-email') {
+    return true;
+  }
+
+  if (req.method === 'POST' && /^\/api\/account-delivery\/orders\/[^/]+\/login-code$/.test(pathOnly)) {
+    return true;
+  }
+
+  return false;
+}
+
 function isAllowedPublicRequest(req) {
   if (req.isActivationOnlyPublicHost) {
     return isAllowedActivationOnlyPublicRequest(req);
+  }
+
+  if (req.isAccountCodePublicHost) {
+    return isAllowedAccountCodePublicRequest(req);
   }
 
   if (req.isAccountDeliveryPublicHost) {
@@ -785,6 +824,7 @@ app.use((req, res, next) => {
   req.isActivationOnlyPublicHost = isActivationOnlyPublicHost(req) && isLoopbackRequest(req);
   req.isBusinessPublicHost = isBusinessPublicHost(req) && isLoopbackRequest(req);
   req.isAccountDeliveryPublicHost = isAccountDeliveryPublicHost(req) && isLoopbackRequest(req);
+  req.isAccountCodePublicHost = isAccountCodePublicHost(req) && isLoopbackRequest(req);
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'same-origin');
@@ -818,7 +858,15 @@ app.use((req, res, next) => {
       res.setHeader('Cache-Control', 'no-store');
       return res.sendFile(accountDeliveryPagePath);
     }
-    if (isReadMethod && ['/email-code', '/email-code.html'].includes(req.path)) {
+    if (isReadMethod && ['/email-code', '/email-code.html', '/a-code', '/a-code.html'].includes(req.path)) {
+      res.setHeader('Cache-Control', 'no-store');
+      return res.sendFile(accountEmailCodePagePath);
+    }
+  }
+
+  if (req.isAccountCodePublicHost) {
+    const isReadMethod = req.method === 'GET' || req.method === 'HEAD';
+    if (isReadMethod && ['/', '/email-code', '/email-code.html', '/a-code', '/a-code.html'].includes(req.path)) {
       res.setHeader('Cache-Control', 'no-store');
       return res.sendFile(accountEmailCodePagePath);
     }
@@ -938,6 +986,11 @@ app.get(['/account-delivery', '/account-delivery.html'], (req, res) => {
 });
 
 app.get(['/email-code', '/email-code.html'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(accountEmailCodePagePath);
+});
+
+app.get(['/a-code', '/a-code.html'], (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.sendFile(accountEmailCodePagePath);
 });
