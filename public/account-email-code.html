@@ -380,10 +380,10 @@
         <div>
           <span class="badge">邮箱验证码</span>
           <h1>查询 GPT 登录验证码</h1>
-          <p>输入下单邮箱和查询密码，选择已交付订单里的邮箱账号，再读取当前验证码。</p>
+          <p>输入下单信息和查询密码，选择已交付订单里的邮箱账号，再读取当前验证码。</p>
         </div>
         <div class="steps">
-          <div class="step"><span class="step-index">1</span><div><b>查询订单</b><span>用下单邮箱和查询密码找回订单。</span></div></div>
+          <div class="step"><span class="step-index">1</span><div><b>查询订单</b><span>用下单信息和查询密码找回订单。</span></div></div>
           <div class="step"><span class="step-index">2</span><div><b>选择邮箱</b><span>只能选择已交付订单中的邮箱账号。</span></div></div>
           <div class="step"><span class="step-index">3</span><div><b>读取验证码</b><span>发送验证码后读取当前账号的验证码。</span></div></div>
         </div>
@@ -392,8 +392,8 @@
       <section class="panel">
         <h2>查询订单</h2>
         <div class="field">
-          <label for="lookup-email">下单邮箱</label>
-          <input id="lookup-email" type="text" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="name@example.com">
+          <label for="lookup-email">下单信息</label>
+          <input id="lookup-email" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="输入下单时填写的信息">
         </div>
         <div class="field">
           <label for="lookup-password">查询密码</label>
@@ -467,10 +467,7 @@
         .trim()
         .replace(/[\u200B-\u200D\uFEFF]/g, '')
         .replace(/\u3000/g, ' ')
-        .replace(/[\uFF20\uFE6B]/g, '@')
-        .replace(/[\u3002\uFF0E\uFF61\uFE52]/g, '.')
-        .replace(/\s+/g, '')
-        .toLowerCase();
+        .trim();
     }
 
     function normalizePasswordInput(value) {
@@ -478,7 +475,8 @@
     }
 
     function isValidEmailInput(value) {
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmailInput(value));
+      const normalized = normalizeEmailInput(value);
+      return normalized.length > 0 && normalized.length <= 256;
     }
 
     function showNotice(text) {
@@ -677,7 +675,7 @@
       const email = normalizeEmailInput(lookupEmail.value);
       const password = normalizePasswordInput(lookupPassword.value);
       if (!isValidEmailInput(email)) {
-        showNotice('请输入正确的下单邮箱。');
+        showNotice('请输入下单信息。');
         lookupEmail.focus();
         return;
       }

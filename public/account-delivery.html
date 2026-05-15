@@ -683,7 +683,7 @@
           </div>
         </div>
         <div class="flow">
-          <div><b>1. 下单支付</b><span>填写接收邮箱并创建订单。</span></div>
+          <div><b>1. 下单支付</b><span>填写下单信息并创建订单。</span></div>
           <div><b>2. 自动确认</b><span>付款回调后立即锁定已售。</span></div>
           <div><b>3. 显示账号</b><span>页面自动显示交付内容。</span></div>
         </div>
@@ -693,8 +693,8 @@
         <h2>创建订单</h2>
         <form id="order-form" novalidate>
           <div class="field">
-            <label for="buyer-email">接收邮箱</label>
-            <input id="buyer-email" type="text" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="name@example.com" required>
+            <label for="buyer-email">下单信息</label>
+            <input id="buyer-email" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="邮箱、数字或任意标识" required>
           </div>
           <div class="field">
             <label for="buyer-password">设置查询密码</label>
@@ -765,8 +765,8 @@
         <div class="lookup">
           <h2>订单找回</h2>
           <div class="field">
-            <label for="lookup-email">下单邮箱</label>
-            <input id="lookup-email" type="text" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="name@example.com">
+            <label for="lookup-email">下单信息</label>
+            <input id="lookup-email" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="输入下单时填写的信息">
           </div>
           <div class="field">
             <label for="lookup-password">查询密码</label>
@@ -850,14 +850,12 @@
         .trim()
         .replace(/[\u200B-\u200D\uFEFF]/g, '')
         .replace(/\u3000/g, ' ')
-        .replace(/[\uFF20\uFE6B]/g, '@')
-        .replace(/[\u3002\uFF0E\uFF61\uFE52]/g, '.')
-        .replace(/\s+/g, '')
-        .toLowerCase();
+        .trim();
     }
 
     function isValidEmailInput(value) {
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmailInput(value));
+      const normalized = normalizeEmailInput(value);
+      return normalized.length > 0 && normalized.length <= 256;
     }
 
     function syncNormalizedEmailInput(input) {
@@ -1155,7 +1153,7 @@
       event.preventDefault();
       const buyerEmail = syncNormalizedEmailInput(buyerEmailInput);
       if (!isValidEmailInput(buyerEmail)) {
-        showNotice('请输入正确的接收邮箱。');
+        showNotice('请输入下单信息。');
         buyerEmailInput.focus();
         return;
       }
@@ -1241,7 +1239,7 @@
 
     function renderLookupOrders(orders) {
       if (!orders.length) {
-        lookupResult.innerHTML = '<div class="lookup-item"><small>没有查到这个邮箱的订单。</small></div>';
+        lookupResult.innerHTML = '<div class="lookup-item"><small>没有查到这个下单信息的订单。</small></div>';
         return;
       }
 
@@ -1279,7 +1277,7 @@
     lookupBtn.addEventListener('click', async () => {
       const email = syncNormalizedEmailInput(lookupEmail) || syncNormalizedEmailInput(buyerEmailInput);
       if (!isValidEmailInput(email)) {
-        showNotice('请输入正确的下单邮箱。');
+        showNotice('请输入下单信息。');
         lookupEmail.focus();
         return;
       }

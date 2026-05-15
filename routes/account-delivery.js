@@ -11,19 +11,17 @@ const DEFAULT_PRICE_CENTS = Number.parseInt(process.env.ACCOUNT_DELIVERY_PRICE_C
 const RESERVE_WINDOW_MINUTES = Math.max(5, Number.parseInt(process.env.ACCOUNT_DELIVERY_RESERVE_MINUTES || '30', 10) || 30);
 const SUPPORTED_METHODS = new Set(['alipay', 'mock']);
 
-function normalizeEmail(email) {
-  return String(email || '')
+function normalizeBuyerIdentifier(value) {
+  return String(value || '')
     .trim()
     .replace(/[\u200B-\u200D\uFEFF]/g, '')
     .replace(/\u3000/g, ' ')
-    .replace(/[\uFF20\uFE6B]/g, '@')
-    .replace(/[\u3002\uFF0E\uFF61\uFE52]/g, '.')
-    .replace(/\s+/g, '')
-    .toLowerCase();
+    .trim();
 }
 
-function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(email));
+function isValidBuyerIdentifier(value) {
+  const normalized = normalizeBuyerIdentifier(value);
+  return normalized.length > 0 && normalized.length <= 256;
 }
 
 function normalizeQueryPassword(password) {
@@ -226,7 +224,7 @@ function toPublicOrder(order, options = {}) {
 function createPendingOrder({ buyerEmail, paymentMethod, queryPassword }) {
   releaseExpiredReservations();
 
-  const normalizedBuyerEmail = normalizeEmail(buyerEmail);
+  const normalizedBuyerEmail = normalizeBuyerIdentifier(buyerEmail);
   const normalizedQueryPassword = normalizeQueryPassword(queryPassword);
   const orderNo = makeOrderNo();
   const publicToken = makePublicToken();
@@ -452,12 +450,12 @@ router.get('/product', (req, res) => {
 });
 
 router.post('/orders', (req, res) => {
-  const buyerEmail = normalizeEmail(req.body.buyer_email || req.body.email);
+  const buyerEmail = normalizeBuyerIdentifier(req.body.buyer_email ?? req.body.email);
   const queryPassword = normalizeQueryPassword(req.body.query_password || req.body.password);
   const paymentMethod = String(req.body.payment_method || req.body.method || 'alipay').toLowerCase();
 
-  if (!isValidEmail(buyerEmail)) {
-    return res.status(400).json({ error: '请输入接收邮箱' });
+  if (!isValidBuyerIdentifier(buyerEmail)) {
+    return res.status(400).json({ error: '请输入下单信息' });
   }
 
   if (!isValidQueryPassword(queryPassword)) {
@@ -589,10 +587,10 @@ router.post('/orders/:orderNo/login-code', async (req, res) => {
 });
 
 router.post('/query-by-email', (req, res) => {
-  const buyerEmail = normalizeEmail(req.body.buyer_email || req.body.email);
+  const buyerEmail = normalizeBuyerIdentifier(req.body.buyer_email ?? req.body.email);
   const queryPassword = normalizeQueryPassword(req.body.query_password || req.body.password);
-  if (!isValidEmail(buyerEmail)) {
-    return res.status(400).json({ error: '请输入下单邮箱' });
+  if (!isValidBuyerIdentifier(buyerEmail)) {
+    return res.status(400).json({ error: '请输入下单信息' });
   }
 
   if (!isValidQueryPassword(queryPassword)) {
