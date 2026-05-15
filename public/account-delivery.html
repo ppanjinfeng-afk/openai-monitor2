@@ -77,6 +77,34 @@
       font-weight: 800;
     }
 
+    .top-actions {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .qq-popover {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 8px);
+      z-index: 20;
+      display: none;
+      min-width: 132px;
+      border: 1px solid #c9dcff;
+      border-radius: 8px;
+      background: #ffffff;
+      color: #0b2f68;
+      padding: 12px 14px;
+      box-shadow: 0 16px 34px rgba(15, 35, 65, 0.15);
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 18px;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .qq-popover.show { display: block; }
+
     .wrap {
       max-width: 1120px;
       margin: 0 auto;
@@ -529,6 +557,10 @@
         padding-top: 14px;
         padding-bottom: 14px;
       }
+      .qq-popover {
+        left: 0;
+        right: auto;
+      }
     }
   </style>
 </head>
@@ -540,7 +572,11 @@
       </span>
       <span>GPT Business 2人席位账号</span>
     </a>
-    <a class="top-link" href="https://t.me/ZC_PJF" target="_blank" rel="noopener">TG 联系</a>
+    <div class="top-actions">
+      <a class="top-link" href="https://t.me/ZC_PJF" target="_blank" rel="noopener">TG 联系</a>
+      <button class="top-link" type="button" id="btn-qq-contact">QQ 联系</button>
+      <div class="qq-popover" id="qq-popover">100626937</div>
+    </div>
   </header>
 
   <main class="wrap">
@@ -665,6 +701,8 @@
     const productPrice = document.getElementById('price-text');
     const soldCount = document.getElementById('sold-count');
     const stockCount = document.getElementById('stock-count');
+    const qqContactBtn = document.getElementById('btn-qq-contact');
+    const qqPopover = document.getElementById('qq-popover');
     const form = document.getElementById('order-form');
     const notice = document.getElementById('notice');
     const statusBox = document.getElementById('order-status');
@@ -694,6 +732,23 @@
     let currentDeliveredAccount = '';
     let loginCodeStartedAt = '';
     let lastVerificationCode = '';
+
+    qqContactBtn.addEventListener('click', event => {
+      event.stopPropagation();
+      qqPopover.classList.toggle('show');
+    });
+
+    document.addEventListener('click', event => {
+      if (!qqPopover.contains(event.target) && event.target !== qqContactBtn) {
+        qqPopover.classList.remove('show');
+      }
+    });
+
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        qqPopover.classList.remove('show');
+      }
+    });
 
     function normalizeEmailInput(value) {
       return String(value || '')
