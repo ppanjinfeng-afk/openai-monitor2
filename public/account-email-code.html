@@ -426,7 +426,7 @@
 
   <script>
     const lookupEmail = document.getElementById('lookup-email');
-    const pageRefreshBtn = document.getElementById('btn-page-refresh');
+    const pageActionBtn = document.getElementById('btn-page-refresh');
     const lookupPassword = document.getElementById('lookup-password');
     const lookupBtn = document.getElementById('btn-lookup');
     const notice = document.getElementById('notice');
@@ -442,8 +442,20 @@
     let codeStartedAt = '';
     let lastCode = '';
 
-    pageRefreshBtn.addEventListener('click', () => {
-      window.location.reload();
+    function isBusinessEmailCodePage() {
+      return window.location.hostname.toLowerCase() === 'business.xn--2team-cd2h.com';
+    }
+
+    if (isBusinessEmailCodePage()) {
+      pageActionBtn.textContent = '返回购买页';
+    }
+
+    pageActionBtn.addEventListener('click', () => {
+      if (isBusinessEmailCodePage()) {
+        window.location.assign('/');
+      } else {
+        window.location.reload();
+      }
     });
 
     function normalizeEmailInput(value) {
