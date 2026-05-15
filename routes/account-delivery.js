@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const db = require('../db');
 const alipayPagePay = require('../services/alipay-page-pay');
+const accountVerificationMail = require('../services/account-verification-mail');
 
 const router = express.Router();
 
@@ -555,6 +556,36 @@ router.get('/orders/:orderNo', (req, res) => {
 
 router.get('/status/:orderNo', (req, res) => {
   getOrderForPublicStatus(req, res, req.params.orderNo);
+});
+
+router.post('/orders/:orderNo/login-code', async (req, res) => {
+  try {
+    const order = db.prepare('SELECT * FROM account_delivery_orders WHERE order_no = ?').get(req.params.orderNo);
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    if (req.isPublicHost && !hasValidOrderToken(req, order)) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    if (order.status !== 'delivered' || !order.account_email) {
+      return res.status(409).json({ error: '账号尚未交付，暂时不能读取验证码' });
+    }
+
+    const result = await accountVerificationMail.getLatestVerificationCode({
+      accountEmail: order.account_email,
+      startedAt: req.body.started_at || req.body.startedAt || req.query.started_at || '',
+    });
+
+    res.json({
+      ...result,
+      orderNo: order.order_no,
+      accountEmail: order.account_email,
+    });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
 });
 
 router.post('/query-by-email', (req, res) => {

@@ -506,6 +506,10 @@ function getPublicRateLimit(req) {
     return { windowMs: 10 * 60 * 1000, max: 20 };
   }
 
+  if (req.method === 'POST' && /^\/api\/account-delivery\/orders\/[^/]+\/login-code$/.test(pathOnly)) {
+    return { windowMs: 10 * 60 * 1000, max: 20 };
+  }
+
   if (req.method === 'POST' && pathOnly === '/api/cdk/verify') {
     return { windowMs: 10 * 60 * 1000, max: 25 };
   }
@@ -659,6 +663,10 @@ function isAllowedAccountDeliveryPublicRequest(req) {
   }
 
   if (req.method === 'POST' && pathOnly === '/api/account-delivery/query-by-email') {
+    return true;
+  }
+
+  if (req.method === 'POST' && /^\/api\/account-delivery\/orders\/[^/]+\/login-code$/.test(pathOnly)) {
     return true;
   }
 

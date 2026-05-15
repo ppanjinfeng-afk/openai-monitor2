@@ -406,6 +406,52 @@
       overflow-wrap: anywhere;
     }
 
+    .verification-panel {
+      margin-top: 14px;
+      border: 1px solid #f0bf56;
+      border-radius: 8px;
+      background: #fff8e8;
+      color: #694a00;
+      padding: 14px;
+    }
+
+    .verification-panel strong {
+      display: block;
+      color: #3b2a00;
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .verification-panel p {
+      margin: 0 0 12px;
+      line-height: 1.7;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .verification-result {
+      display: none;
+      margin-top: 12px;
+      border: 1px solid #eed28d;
+      border-radius: 8px;
+      background: #ffffff;
+      padding: 12px;
+      color: #3b2a00;
+      overflow-wrap: anywhere;
+    }
+
+    .verification-result.show { display: block; }
+
+    .verification-code {
+      display: inline-block;
+      margin: 6px 8px 6px 0;
+      color: #0b2f68;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+    }
+
     .qr-layout {
       display: grid;
       grid-template-columns: 180px minmax(0, 1fr);
@@ -582,7 +628,18 @@
           <strong>账号已交付</strong>
           <code class="account-value" id="account-email">--</code>
           <div class="actions">
-            <button class="secondary" type="button" id="btn-copy">复制内容</button>
+            <button class="secondary" type="button" id="btn-copy">复制账号</button>
+            <button class="secondary" type="button" id="btn-copy-all">复制全部交付信息</button>
+          </div>
+          <div class="verification-panel" id="verification-panel">
+            <strong>Team 账号登录验证码</strong>
+            <p>先复制账号，到 OpenAI 登录页输入账号并发送验证码。发送后点下面按钮，系统会自动从邮箱读取并显示当前账号的验证码。</p>
+            <div class="actions">
+              <a class="secondary button-link" href="https://chatgpt.com/" target="_blank" rel="noopener">打开 OpenAI 登录页</a>
+              <button class="primary" type="button" id="btn-fetch-login-code">我已发送验证码，帮我读取</button>
+              <button class="secondary" type="button" id="btn-refresh-login-code">刷新读取结果</button>
+            </div>
+            <div class="verification-result" id="verification-result"></div>
           </div>
         </div>
 
@@ -618,6 +675,10 @@
     const accountBox = document.getElementById('account-box');
     const accountEmailEl = document.getElementById('account-email');
     const copyBtn = document.getElementById('btn-copy');
+    const copyAllBtn = document.getElementById('btn-copy-all');
+    const verificationResult = document.getElementById('verification-result');
+    const fetchLoginCodeBtn = document.getElementById('btn-fetch-login-code');
+    const refreshLoginCodeBtn = document.getElementById('btn-refresh-login-code');
     const buyerEmailInput = document.getElementById('buyer-email');
     const buyerPasswordInput = document.getElementById('buyer-password');
     const lookupEmail = document.getElementById('lookup-email');
@@ -631,6 +692,9 @@
     let currentOrderNo = '';
     let currentOrderToken = '';
     let pollTimer = null;
+    let currentDeliveredAccount = '';
+    let loginCodeStartedAt = '';
+    let lastVerificationCode = '';
 
     function normalizeEmailInput(value) {
       return String(value || '')
@@ -732,6 +796,78 @@
       return `北京时间 ${formatBeijingTime(timeValue)}`;
     }
 
+    async function copyText(text) {
+      await navigator.clipboard.writeText(String(text || '')).catch(() => {});
+    }
+
+    function setVerificationResult(html, show = true) {
+      verificationResult.innerHTML = html;
+      verificationResult.classList.toggle('show', show);
+    }
+
+    function resetVerificationResult() {
+      loginCodeStartedAt = '';
+      lastVerificationCode = '';
+      setVerificationResult('', false);
+    }
+
+    function setLoginCodeButtonsDisabled(disabled) {
+      fetchLoginCodeBtn.disabled = disabled;
+      refreshLoginCodeBtn.disabled = disabled;
+      fetchLoginCodeBtn.textContent = disabled ? '正在读取...' : '我已发送验证码，帮我读取';
+      refreshLoginCodeBtn.textContent = disabled ? '正在刷新...' : '刷新读取结果';
+    }
+
+    async function readLoginVerificationCode(resetWindow = false) {
+      if (!currentOrderNo || !currentOrderToken) {
+        showNotice('请先通过订单链接或订单找回打开已交付订单。');
+        return;
+      }
+      if (resetWindow || !loginCodeStartedAt) {
+        loginCodeStartedAt = new Date().toISOString();
+        lastVerificationCode = '';
+      }
+
+      setLoginCodeButtonsDisabled(true);
+      setVerificationResult('<strong>正在读取验证码...</strong><div>系统正在按当前交付账号搜索最新验证码，请稍等。</div>');
+      try {
+        const qs = `?token=${encodeURIComponent(currentOrderToken)}`;
+        const data = await request(`/api/account-delivery/orders/${encodeURIComponent(currentOrderNo)}/login-code${qs}`, {
+          method: 'POST',
+          body: JSON.stringify({ started_at: loginCodeStartedAt }),
+        });
+
+        if (data.found && data.code) {
+          lastVerificationCode = data.code;
+          const receivedText = data.receivedAt ? `收到时间：${escapeHtml(formatBeijingTime(data.receivedAt))}` : '';
+          setVerificationResult(`
+            <strong>验证码已读取</strong>
+            <div>
+              <span class="verification-code">${escapeHtml(data.code)}</span>
+              <button class="secondary" type="button" id="btn-copy-login-code">复制验证码</button>
+            </div>
+            <small>${receivedText}</small>
+          `);
+          document.getElementById('btn-copy-login-code')?.addEventListener('click', async () => {
+            await copyText(lastVerificationCode);
+            showNotice('验证码已复制。');
+          });
+        } else {
+          setVerificationResult(`
+            <strong>暂时没有读取到验证码</strong>
+            <div>${escapeHtml(data.message || '请确认已经发送验证码，稍等几秒后再刷新读取结果。')}</div>
+          `);
+        }
+      } catch (err) {
+        setVerificationResult(`
+          <strong>读取失败</strong>
+          <div>${escapeHtml(err.message)}</div>
+        `);
+      } finally {
+        setLoginCodeButtonsDisabled(false);
+      }
+    }
+
     function isMobilePaymentBrowser() {
       return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|HarmonyOS|MicroMessenger/i.test(navigator.userAgent || '');
     }
@@ -796,11 +932,17 @@
 
       if (order.status === 'delivered' && order.accountEmail) {
         accountEmailEl.textContent = order.accountEmail;
+        if (currentDeliveredAccount !== order.accountEmail) {
+          currentDeliveredAccount = order.accountEmail;
+          resetVerificationResult();
+        }
         accountBox.classList.add('show');
         stopPolling();
         return;
       }
 
+      currentDeliveredAccount = '';
+      resetVerificationResult();
       accountBox.classList.remove('show');
       if (order.status !== 'delivered') {
         if (order.payUrl) {
@@ -920,9 +1062,32 @@
     copyBtn.addEventListener('click', async () => {
       const email = accountEmailEl.textContent.trim();
       if (!email) return;
-      await navigator.clipboard.writeText(email).catch(() => {});
+      await copyText(email);
       copyBtn.textContent = '已复制';
-      setTimeout(() => { copyBtn.textContent = '复制内容'; }, 1400);
+      setTimeout(() => { copyBtn.textContent = '复制账号'; }, 1400);
+    });
+
+    copyAllBtn.addEventListener('click', async () => {
+      const email = accountEmailEl.textContent.trim();
+      if (!email) return;
+      const lines = [
+        `账号：${email}`,
+        '登录页：https://chatgpt.com/',
+      ];
+      if (lastVerificationCode) {
+        lines.push(`验证码：${lastVerificationCode}`);
+      }
+      await copyText(lines.join('\n'));
+      copyAllBtn.textContent = '已复制';
+      setTimeout(() => { copyAllBtn.textContent = '复制全部交付信息'; }, 1400);
+    });
+
+    fetchLoginCodeBtn.addEventListener('click', () => {
+      readLoginVerificationCode(true);
+    });
+
+    refreshLoginCodeBtn.addEventListener('click', () => {
+      readLoginVerificationCode(false);
     });
 
     function renderLookupOrders(orders) {
