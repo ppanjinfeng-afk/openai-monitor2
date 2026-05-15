@@ -8,7 +8,8 @@ const telegram = require('./telegram');
 const OAUTH_CLIENT_ID = 'app_EMoamEEZ73f0CkXaXp7hrann';
 const OAUTH_AUTHORIZE_URL = 'https://auth.openai.com/oauth/authorize';
 const OAUTH_TOKEN_URL = 'https://auth.openai.com/oauth/token';
-const OAUTH_REDIRECT_URI = 'http://localhost:1455/auth/callback';
+const LOCAL_OAUTH_REDIRECT_URI = 'http://localhost:1455/auth/callback';
+const OAUTH_REDIRECT_URI = process.env.OAUTH_REDIRECT_URI || LOCAL_OAUTH_REDIRECT_URI;
 const OAUTH_AUDIENCE = 'https://api.openai.com/v1';
 const OAUTH_SCOPES = 'openid profile email offline_access';
 
@@ -451,10 +452,19 @@ async function attemptDirectLogin(account) {
 }
 
 // ===== OAuth Authorization (browser-based, for initial token acquisition) =====
-function buildAuthorizationUrl(codeChallenge, state, loginHint) {
+function getOAuthRedirectUri() {
+  return String(process.env.OAUTH_REDIRECT_URI || OAUTH_REDIRECT_URI || LOCAL_OAUTH_REDIRECT_URI).trim()
+    || LOCAL_OAUTH_REDIRECT_URI;
+}
+
+function getLocalOAuthRedirectUri() {
+  return LOCAL_OAUTH_REDIRECT_URI;
+}
+
+function buildAuthorizationUrl(codeChallenge, state, loginHint, redirectUri = getOAuthRedirectUri()) {
   const params = new URLSearchParams({
     client_id: OAUTH_CLIENT_ID,
-    redirect_uri: OAUTH_REDIRECT_URI,
+    redirect_uri: redirectUri,
     response_type: 'code',
     scope: OAUTH_SCOPES,
     audience: OAUTH_AUDIENCE,
@@ -471,7 +481,7 @@ function buildAuthorizationUrl(codeChallenge, state, loginHint) {
   return `${OAUTH_AUTHORIZE_URL}?${params.toString()}`;
 }
 
-async function exchangeCodeForTokens(code, codeVerifier) {
+async function exchangeCodeForTokens(code, codeVerifier, redirectUri = getOAuthRedirectUri()) {
   const res = await fetch(OAUTH_TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -479,7 +489,7 @@ async function exchangeCodeForTokens(code, codeVerifier) {
       grant_type: 'authorization_code',
       client_id: OAUTH_CLIENT_ID,
       code,
-      redirect_uri: OAUTH_REDIRECT_URI,
+      redirect_uri: redirectUri,
       code_verifier: codeVerifier,
     }),
   });
@@ -492,13 +502,18 @@ async function exchangeCodeForTokens(code, codeVerifier) {
   throw new Error(body.message || `HTTP ${res.status}`);
 }
 
-function startOAuthFlow(loginHint) {
+function startOAuthFlow(loginHint, options = {}) {
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = generateCodeChallenge(codeVerifier);
   const state = generateState();
-  const authUrl = buildAuthorizationUrl(codeChallenge, state, loginHint);
+  const redirectUri = String(options.redirectUri || getOAuthRedirectUri()).trim() || getLocalOAuthRedirectUri();
+  const fallbackRedirectUri = getLocalOAuthRedirectUri();
+  const authUrl = buildAuthorizationUrl(codeChallenge, state, loginHint, redirectUri);
+  const fallbackAuthUrl = redirectUri === fallbackRedirectUri
+    ? ''
+    : buildAuthorizationUrl(codeChallenge, state, loginHint, fallbackRedirectUri);
 
-  return { authUrl, codeVerifier, state };
+  return { authUrl, fallbackAuthUrl, codeVerifier, state, redirectUri, fallbackRedirectUri };
 }
 
 function waitForOAuthCallback(codeVerifier, state, timeout = 120000) {
@@ -531,7 +546,7 @@ function waitForOAuthCallback(codeVerifier, state, timeout = 120000) {
       }
 
       try {
-        const tokens = await exchangeCodeForTokens(code, codeVerifier);
+        const tokens = await exchangeCodeForTokens(code, codeVerifier, LOCAL_OAUTH_REDIRECT_URI);
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
         res.end('<html><body style="background:#0a0e17;color:#f0f4f8;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh"><div style="text-align:center"><h2>授权成功</h2><p>令牌已保存，可以关闭此页面</p></div></body></html>');
         server.close();
@@ -682,6 +697,8 @@ module.exports = {
   getStats,
   startOAuthFlow,
   exchangeCodeForTokens,
+  getOAuthRedirectUri,
+  getLocalOAuthRedirectUri,
   waitForOAuthCallback,
   checkWithToken,
   refreshAccessToken,

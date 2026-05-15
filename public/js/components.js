@@ -1540,27 +1540,34 @@ const Components = {
     `;
   },
 
-  oauthAssistModal(account = null, authUrl = '') {
+  oauthAssistModal(account = null, authUrl = '', fallbackAuthUrl = '') {
     const accountName = this.escapeHtml(account?.email || '当前账号');
     const safeAuthUrl = this.escapeHtml(authUrl || '');
+    const safeFallbackAuthUrl = this.escapeHtml(fallbackAuthUrl || '');
     return `
       <div>
         <p class="form-intro">
-          已为 ${accountName} 生成 OAuth 授权链接。登录完成后如果页面跳到 localhost 并显示“无法访问此网站”，这是正常的。
+          已为 ${accountName} 生成 OAuth 授权链接。优先使用公网回调，登录完成后会直接保存令牌。
         </p>
         <div class="dashboard-alert-list">
-          <div class="dashboard-alert-item warning">
-            <div class="dashboard-alert-head"><strong>看到 localhost 错误时这样做</strong></div>
-            <div class="dashboard-alert-detail">不要关闭错误页，复制浏览器地址栏里的整条 localhost 回调链接，粘贴到下面的“回调链接”框里，系统会自动完成授权。</div>
+          <div class="dashboard-alert-item accent">
+            <div class="dashboard-alert-head"><strong>直接回调</strong></div>
+            <div class="dashboard-alert-detail">正常情况下，授权完成后会显示“OAuth 授权已完成”，不需要再复制 localhost 链接。</div>
           </div>
+          ${safeFallbackAuthUrl ? `
+          <div class="dashboard-alert-item warning">
+            <div class="dashboard-alert-head"><strong>备用方式</strong></div>
+            <div class="dashboard-alert-detail">如果公网回调被 OpenAI 拒绝，再点击“本机回调备用”。看到 localhost 错误时，复制地址栏链接粘贴到下面。</div>
+          </div>` : ''}
         </div>
         <div class="form-group">
           <label>打开授权页</label>
           <div class="form-help">
-            在新标签页完成 OpenAI 登录。登录完成后如果看到 localhost 拒绝连接，直接复制地址栏链接。
+            先使用“打开授权页”。如果回调成功，回到后台刷新即可看到账号已授权。
           </div>
           <div class="form-actions form-actions-spaced">
             <a class="btn btn-primary" href="${safeAuthUrl}" target="_blank" rel="noopener noreferrer">打开授权页</a>
+            ${safeFallbackAuthUrl ? `<a class="btn btn-secondary" href="${safeFallbackAuthUrl}" target="_blank" rel="noopener noreferrer">本机回调备用</a>` : ''}
           </div>
         </div>
         <div class="form-group">

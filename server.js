@@ -57,6 +57,7 @@ const activationOnlyPagePath = path.join(__dirname, 'public', 'activation-only.h
 const businessPagePath = path.join(__dirname, 'public', 'business.html');
 const accountDeliveryPagePath = path.join(__dirname, 'public', 'account-delivery.html');
 const accountEmailCodePagePath = path.join(__dirname, 'public', 'account-email-code.html');
+const checksRoutes = require('./routes/checks');
 const getSettingValueStmt = db.prepare('SELECT value FROM settings WHERE key = ?');
 
 function isPublicHost(req) {
@@ -830,6 +831,7 @@ app.use((req, res, next) => {
   res.setHeader('Referrer-Policy', 'same-origin');
   next();
 });
+app.get('/auth/callback', checksRoutes.handlePublicOAuthCallback);
 app.use(enforceAdminSessionAuth);
 app.use(enforcePublicRateLimit);
 app.use((req, res, next) => {
@@ -959,7 +961,7 @@ app.use(express.static(publicDir, {
 
 // API Routes
 app.use('/api/accounts', require('./routes/accounts'));
-app.use('/api/checks', require('./routes/checks'));
+app.use('/api/checks', checksRoutes);
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/system', require('./routes/system'));
 app.use('/api/invites', require('./routes/invites'));
