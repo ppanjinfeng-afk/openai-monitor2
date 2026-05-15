@@ -446,6 +446,10 @@
       return window.location.hostname.toLowerCase() === 'business.xn--2team-cd2h.com';
     }
 
+    function isStandaloneCodePage() {
+      return window.location.hostname.toLowerCase() === 'code.xn--2team-cd2h.com';
+    }
+
     if (isBusinessEmailCodePage()) {
       pageActionBtn.textContent = '返回购买页';
     }
@@ -586,21 +590,30 @@
         return;
       }
 
+      const compactView = isStandaloneCodePage();
       ordersHost.innerHTML = orders.map(order => {
         const status = getStatusText(order);
         const isDelivered = order.status === 'delivered' && order.accountEmail;
         const accountText = isDelivered ? order.accountEmail : '-';
         const timeText = formatBeijingTime(order.deliveredAt || order.updatedAt || order.createdAt);
-        return `
-          <div class="order-card">
-            <div class="order-head">
-              <span class="pill ${escapeHtml(order.status || '')}">${escapeHtml(status)}</span>
-              <button class="${isDelivered ? 'primary' : 'secondary'}" type="button" data-order-no="${escapeHtml(order.orderNo || '')}" ${isDelivered ? '' : 'disabled'}>${isDelivered ? '选择邮箱' : '未交付'}</button>
-            </div>
+        const orderDetails = compactView
+          ? `
+            <small>邮箱账号：${escapeHtml(accountText)}</small>
+            <small>北京时间：${escapeHtml(timeText)}</small>
+          `
+          : `
             <small>订单号：${escapeHtml(order.orderNo || '')}</small>
             <small>邮箱账号：${escapeHtml(accountText)}</small>
             <small>金额：${escapeHtml(order.amountText || '')}</small>
             <small>北京时间：${escapeHtml(timeText)}</small>
+          `;
+        return `
+          <div class="order-card">
+            <div class="order-head">
+              ${compactView ? '<span></span>' : `<span class="pill ${escapeHtml(order.status || '')}">${escapeHtml(status)}</span>`}
+              <button class="${isDelivered ? 'primary' : 'secondary'}" type="button" data-order-no="${escapeHtml(order.orderNo || '')}" ${isDelivered ? '' : 'disabled'}>${isDelivered ? '选择邮箱' : '未交付'}</button>
+            </div>
+            ${orderDetails}
           </div>
         `;
       }).join('');
