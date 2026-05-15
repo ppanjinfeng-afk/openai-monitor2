@@ -371,7 +371,7 @@
       </span>
       <span>GPT登录验证码</span>
     </a>
-    <a class="top-link" href="/">返回购买页</a>
+    <button class="top-link" type="button" id="btn-page-refresh">刷新</button>
   </header>
 
   <main class="wrap">
@@ -426,6 +426,7 @@
 
   <script>
     const lookupEmail = document.getElementById('lookup-email');
+    const pageRefreshBtn = document.getElementById('btn-page-refresh');
     const lookupPassword = document.getElementById('lookup-password');
     const lookupBtn = document.getElementById('btn-lookup');
     const notice = document.getElementById('notice');
@@ -440,6 +441,10 @@
     let selectedOrder = null;
     let codeStartedAt = '';
     let lastCode = '';
+
+    pageRefreshBtn.addEventListener('click', () => {
+      window.location.reload();
+    });
 
     function normalizeEmailInput(value) {
       return String(value || '')
