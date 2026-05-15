@@ -116,6 +116,37 @@
 
     .qq-popover.show { display: block; }
 
+    .proxy-code-popover {
+      align-items: center;
+      gap: 8px;
+      min-width: max-content;
+      max-width: calc(100vw - 32px);
+      white-space: nowrap;
+      overflow-wrap: normal;
+      font-size: 15px;
+    }
+
+    .proxy-code-popover.show {
+      display: flex;
+    }
+
+    .popover-copy {
+      flex: 0 0 auto;
+      min-height: 30px;
+      padding: 0 10px;
+      border: 1px solid #b8cdf0;
+      border-radius: 8px;
+      color: #1d4ed8;
+      background: #eef5ff;
+      font-size: 13px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .popover-copy:hover {
+      background: #dfeaff;
+    }
+
     .wrap {
       max-width: 1120px;
       margin: 0 auto;
@@ -674,7 +705,10 @@
         </div>
         <div class="contact-entry">
           <button class="top-link" type="button" id="btn-proxy-code">代理接码</button>
-          <div class="qq-popover" id="proxy-code-popover">code.xn--2team-cd2h.com</div>
+          <div class="qq-popover proxy-code-popover" id="proxy-code-popover">
+            <span id="proxy-code-text">code.xn--2team-cd2h.com</span>
+            <button class="popover-copy" type="button" id="btn-copy-proxy-code">复制</button>
+          </div>
         </div>
       </div>
     </div>
@@ -811,6 +845,8 @@
     const qqPopover = document.getElementById('qq-popover');
     const proxyCodeBtn = document.getElementById('btn-proxy-code');
     const proxyCodePopover = document.getElementById('proxy-code-popover');
+    const proxyCodeText = document.getElementById('proxy-code-text');
+    const proxyCodeCopyBtn = document.getElementById('btn-copy-proxy-code');
     const form = document.getElementById('order-form');
     const notice = document.getElementById('notice');
     const statusBox = document.getElementById('order-status');
@@ -867,6 +903,13 @@
       const shouldShow = !proxyCodePopover.classList.contains('show');
       closeContactPopovers();
       proxyCodePopover.classList.toggle('show', shouldShow);
+    });
+
+    proxyCodeCopyBtn.addEventListener('click', async event => {
+      event.stopPropagation();
+      await copyText(proxyCodeText.textContent.trim());
+      proxyCodeCopyBtn.textContent = '已复制';
+      setTimeout(() => { proxyCodeCopyBtn.textContent = '复制'; }, 1400);
     });
 
     document.addEventListener('click', event => {
