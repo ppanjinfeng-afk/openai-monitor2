@@ -1546,12 +1546,18 @@ const Components = {
     return `
       <div>
         <p class="form-intro">
-          自动授权未完成，已为 ${accountName} 生成备用 OAuth 授权链接。
+          已为 ${accountName} 生成 OAuth 授权链接。登录完成后如果页面跳到 localhost 并显示“无法访问此网站”，这是正常的。
         </p>
+        <div class="dashboard-alert-list">
+          <div class="dashboard-alert-item warning">
+            <div class="dashboard-alert-head"><strong>看到 localhost 错误时这样做</strong></div>
+            <div class="dashboard-alert-detail">不要关闭错误页，复制浏览器地址栏里的整条 localhost 回调链接，粘贴到下面的“回调链接”框里，系统会自动完成授权。</div>
+          </div>
+        </div>
         <div class="form-group">
           <label>打开授权页</label>
           <div class="form-help">
-            在新标签页完成 OpenAI 登录后，复制浏览器地址栏里的 localhost 回调链接。
+            在新标签页完成 OpenAI 登录。登录完成后如果看到 localhost 拒绝连接，直接复制地址栏链接。
           </div>
           <div class="form-actions form-actions-spaced">
             <a class="btn btn-primary" href="${safeAuthUrl}" target="_blank" rel="noopener noreferrer">打开授权页</a>

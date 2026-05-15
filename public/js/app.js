@@ -5516,8 +5516,8 @@ App.oauthAccount = async function(id) {
       document.getElementById('oauth-callback-url')?.focus();
       this.toast(
         popup
-          ? `${err.message}。已打开备用授权页`
-          : `${err.message}。请点击弹窗里的“打开授权页”`,
+          ? `${err.message}。已打开授权页；看到 localhost 错误后复制地址栏链接粘回后台`
+          : `${err.message}。请点击弹窗里的“打开授权页”，看到 localhost 错误后复制地址栏链接`,
         'warning'
       );
       setTimeout(() => this.loadAccounts(), 5000);
