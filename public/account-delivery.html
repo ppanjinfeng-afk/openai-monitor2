@@ -538,6 +538,79 @@
       overflow-wrap: anywhere;
     }
 
+    body.modal-locked {
+      overflow: hidden;
+    }
+
+    .entry-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      background: rgba(8, 21, 36, 0.66);
+      backdrop-filter: blur(8px);
+    }
+
+    .entry-modal[hidden] {
+      display: none;
+    }
+
+    .entry-dialog {
+      width: min(520px, 100%);
+      border: 1px solid #bad3e8;
+      border-radius: 8px;
+      background: #ffffff;
+      box-shadow: 0 28px 80px rgba(8, 21, 36, 0.26);
+      padding: 24px;
+    }
+
+    .entry-tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 0 10px;
+      border: 1px solid #9edbd9;
+      border-radius: 8px;
+      color: #08706c;
+      background: #eafffb;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .entry-dialog h2 {
+      margin: 18px 0 12px;
+      font-size: 30px;
+      line-height: 1.18;
+      color: var(--ink);
+    }
+
+    .entry-dialog p {
+      margin: 0 0 12px;
+      color: #334960;
+      font-size: 16px;
+      line-height: 1.75;
+    }
+
+    .entry-confirm {
+      width: 100%;
+      min-height: 48px;
+      margin-top: 10px;
+      border: 0;
+      border-radius: 8px;
+      color: #ffffff;
+      background: var(--blue);
+      font-size: 16px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 14px 28px rgba(37, 99, 235, 0.18);
+    }
+
+    .entry-confirm:hover {
+      background: var(--blue-dark);
+    }
+
     @media (max-width: 880px) {
       .layout { grid-template-columns: 1fr; }
       .product { position: static; min-height: auto; }
@@ -564,7 +637,16 @@
     }
   </style>
 </head>
-<body>
+<body class="modal-locked">
+  <div class="entry-modal" id="entry-modal" role="dialog" aria-modal="true" aria-labelledby="entry-title">
+    <div class="entry-dialog">
+      <div class="entry-tag">购买前确认</div>
+      <h2 id="entry-title">Business席位2人</h2>
+      <p>账号本身只能邀请一个成员，多一个都不行。</p>
+      <p>质保2小时，下单时创建的邮箱请按照客户的要求填邮箱和密码，以方便后续客户接码登录。</p>
+      <button class="entry-confirm" type="button" id="btn-entry-confirm">确认，继续访问</button>
+    </div>
+  </div>
   <header class="topbar">
     <a class="brand" href="/" aria-label="GPT Business 2人席位账号">
       <span class="brand-mark" aria-hidden="true">
@@ -699,6 +781,8 @@
   </main>
 
   <script>
+    const entryModal = document.getElementById('entry-modal');
+    const entryConfirmBtn = document.getElementById('btn-entry-confirm');
     const productPrice = document.getElementById('price-text');
     const soldCount = document.getElementById('sold-count');
     const stockCount = document.getElementById('stock-count');
@@ -733,6 +817,15 @@
     let currentDeliveredAccount = '';
     let loginCodeStartedAt = '';
     let lastVerificationCode = '';
+
+    entryConfirmBtn?.addEventListener('click', () => {
+      entryModal.hidden = true;
+      document.body.classList.remove('modal-locked');
+    });
+
+    window.addEventListener('load', () => {
+      entryConfirmBtn?.focus();
+    });
 
     qqContactBtn.addEventListener('click', event => {
       event.stopPropagation();
