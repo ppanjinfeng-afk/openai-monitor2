@@ -68,6 +68,13 @@
     .qq-contact-popover.show {
       display: inline-flex;
     }
+    .activation-page-popover {
+      max-width: calc(100vw - 32px);
+      white-space: nowrap;
+      letter-spacing: 0;
+      font-size: 15px;
+      overflow-wrap: normal;
+    }
     .wrap {
       max-width: 1120px;
       margin: 0 auto;
@@ -1805,6 +1812,7 @@
       <a class="link" href="/join">已有 CDK，去激活</a>
       <a class="link" href="https://t.me/ZC_PJF" target="_blank" rel="noopener">TG 联系</a>
       <a class="link" href="https://wpa.qq.com/msgrd?v=3&amp;uin=1006267937&amp;site=qq&amp;menu=yes" target="_blank" rel="noopener">QQ 联系</a>
+      <a class="link" id="proxy-activation-link" href="#">代理激活页面</a>
     </nav>
   </header>
 
@@ -2750,38 +2758,46 @@
       }
     };
 
-    const qqContactLink = document.querySelector('a[href*="wpa.qq.com"]');
-    if (qqContactLink) {
-      qqContactLink.href = '#';
-      qqContactLink.removeAttribute('target');
-      qqContactLink.removeAttribute('rel');
-
-      const qqContactPopover = document.createElement('span');
-      qqContactPopover.className = 'qq-contact-popover';
-      qqContactPopover.textContent = '1006267937';
-      qqContactLink.insertAdjacentElement('afterend', qqContactPopover);
-
-      const hideQqContact = () => {
-        qqContactPopover.classList.remove('show');
-      };
-
-      qqContactLink.addEventListener('click', (event) => {
-        event.preventDefault();
-        qqContactPopover.classList.toggle('show');
-      });
-
-      document.addEventListener('click', (event) => {
-        if (event.target !== qqContactLink && !qqContactPopover.contains(event.target)) {
-          hideQqContact();
-        }
-      });
-
-      document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
-          hideQqContact();
-        }
+    function closeNavPopovers() {
+      document.querySelectorAll('.qq-contact-popover.show').forEach(popover => {
+        popover.classList.remove('show');
       });
     }
+
+    function setupNavPopover(link, text, extraClass = '') {
+      if (!link) return;
+      link.href = '#';
+      link.removeAttribute('target');
+      link.removeAttribute('rel');
+
+      const popover = document.createElement('span');
+      popover.className = `qq-contact-popover${extraClass ? ` ${extraClass}` : ''}`;
+      popover.textContent = text;
+      link.insertAdjacentElement('afterend', popover);
+
+      link.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const shouldShow = !popover.classList.contains('show');
+        closeNavPopovers();
+        popover.classList.toggle('show', shouldShow);
+      });
+    }
+
+    setupNavPopover(document.querySelector('a[href*="wpa.qq.com"]'), '1006267937');
+    setupNavPopover(document.getElementById('proxy-activation-link'), 'https://www.panqda.com', 'activation-page-popover');
+
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('.nav-links')) {
+        closeNavPopovers();
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeNavPopovers();
+      }
+    });
 
     loadProductWithRetry()
       .catch(err => showNotice(err.message))
