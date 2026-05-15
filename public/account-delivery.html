@@ -632,12 +632,11 @@
             <button class="secondary" type="button" id="btn-copy-all">复制全部交付信息</button>
           </div>
           <div class="verification-panel" id="verification-panel">
-            <strong>Team 账号登录验证码</strong>
-            <p>先复制账号，到 OpenAI 登录页输入账号并发送验证码。发送后点下面按钮，系统会自动从邮箱读取并显示当前账号的验证码。</p>
+            <strong>GPT登录验证码</strong>
             <div class="actions">
-              <a class="secondary button-link" href="https://chatgpt.com/" target="_blank" rel="noopener">打开 OpenAI 登录页</a>
-              <button class="primary" type="button" id="btn-fetch-login-code">我已发送验证码，帮我读取</button>
-              <button class="secondary" type="button" id="btn-refresh-login-code">刷新读取结果</button>
+              <a class="secondary button-link" href="https://chatgpt.com/" target="_blank" rel="noopener">打开OpenAi登录界面</a>
+              <button class="primary" type="button" id="btn-fetch-login-code">我已发送验证码</button>
+              <button class="secondary" type="button" id="btn-refresh-login-code">刷新验证码</button>
             </div>
             <div class="verification-result" id="verification-result"></div>
           </div>
@@ -814,8 +813,8 @@
     function setLoginCodeButtonsDisabled(disabled) {
       fetchLoginCodeBtn.disabled = disabled;
       refreshLoginCodeBtn.disabled = disabled;
-      fetchLoginCodeBtn.textContent = disabled ? '正在读取...' : '我已发送验证码，帮我读取';
-      refreshLoginCodeBtn.textContent = disabled ? '正在刷新...' : '刷新读取结果';
+      fetchLoginCodeBtn.textContent = disabled ? '正在读取...' : '我已发送验证码';
+      refreshLoginCodeBtn.textContent = disabled ? '正在刷新...' : '刷新验证码';
     }
 
     async function readLoginVerificationCode(resetWindow = false) {
@@ -855,7 +854,7 @@
         } else {
           setVerificationResult(`
             <strong>暂时没有读取到验证码</strong>
-            <div>${escapeHtml(data.message || '请确认已经发送验证码，稍等几秒后再刷新读取结果。')}</div>
+            <div>${escapeHtml(data.message || '请确认已经发送验证码，稍等几秒后再刷新验证码。')}</div>
           `);
         }
       } catch (err) {
