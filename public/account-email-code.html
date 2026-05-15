@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GPT登录验证码</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --bg: #eef5f8;
+      --ink: #102235;
+      --muted: #5b6b7d;
+      --line: #d8e3eb;
+      --panel: #ffffff;
+      --blue: #2563eb;
+      --blue-dark: #1d4ed8;
+      --cyan: #16c7c7;
+      --green: #0f9f6e;
+      --amber: #a76510;
+      --shadow: 0 24px 70px rgba(21, 42, 66, 0.12);
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        linear-gradient(135deg, rgba(22, 199, 199, 0.16), transparent 34%),
+        linear-gradient(180deg, #f5f9fd 0, var(--bg) 100%);
+      font-family: Inter, "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+    }
+
+    .topbar {
+      max-width: 1120px;
+      min-height: 74px;
+      margin: 0 auto;
+      padding: 0 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand,
+    .top-link {
+      display: inline-flex;
+      align-items: center;
+      text-decoration: none;
+      font-weight: 900;
+    }
+
+    .brand {
+      gap: 10px;
+      color: inherit;
+      font-size: 18px;
+    }
+
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: #ffffff;
+      background: #112437;
+      box-shadow: 0 12px 26px rgba(17, 36, 55, 0.18);
+    }
+
+    .top-link {
+      min-height: 36px;
+      padding: 0 12px;
+      border: 1px solid #c9dcff;
+      border-radius: 8px;
+      color: #1d4ed8;
+      background: rgba(255,255,255,0.72);
+      font-size: 14px;
+    }
+
+    .wrap {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 18px 22px 54px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(320px, 0.88fr) minmax(0, 1.12fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .hero {
+      position: sticky;
+      top: 18px;
+      min-height: 520px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-radius: 8px;
+      padding: 30px;
+      color: #ffffff;
+      background:
+        linear-gradient(135deg, rgba(22, 199, 199, 0.12), transparent 38%),
+        linear-gradient(180deg, #102235 0%, #163c4c 100%);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .badge {
+      display: inline-flex;
+      width: max-content;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 12px;
+      border: 1px solid rgba(255,255,255,0.22);
+      border-radius: 999px;
+      color: #83f3ea;
+      background: rgba(255,255,255,0.08);
+      font-weight: 900;
+    }
+
+    h1 {
+      margin: 24px 0 14px;
+      font-size: 48px;
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    .hero p {
+      margin: 0;
+      color: rgba(255,255,255,0.76);
+      font-size: 16px;
+      line-height: 1.8;
+      font-weight: 800;
+    }
+
+    .steps {
+      display: grid;
+      gap: 10px;
+      margin-top: 28px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr);
+      gap: 12px;
+      align-items: center;
+      min-height: 68px;
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 8px;
+      padding: 12px;
+      background: rgba(255,255,255,0.07);
+    }
+
+    .step-index {
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      color: #073d37;
+      background: #6df0cf;
+      font-weight: 900;
+    }
+
+    .step b { display: block; margin-bottom: 4px; }
+    .step span { color: rgba(255,255,255,0.68); font-size: 13px; line-height: 1.5; }
+
+    .panel {
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      padding: 30px;
+    }
+
+    h2 {
+      margin: 0 0 22px;
+      font-size: 28px;
+      line-height: 1.2;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    label {
+      font-weight: 900;
+      color: var(--ink);
+    }
+
+    input {
+      width: 100%;
+      min-height: 52px;
+      border: 1px solid #cbd8e6;
+      border-radius: 8px;
+      padding: 0 14px;
+      color: var(--ink);
+      background: #fbfcff;
+      font: inherit;
+      font-size: 17px;
+    }
+
+    input:focus {
+      outline: 2px solid rgba(37, 99, 235, 0.18);
+      border-color: #8fb1f7;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    button,
+    .button-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      border: 0;
+      border-radius: 8px;
+      padding: 0 16px;
+      color: inherit;
+      font: inherit;
+      font-weight: 900;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .primary {
+      color: #ffffff;
+      background: var(--blue);
+    }
+
+    .primary:hover { background: var(--blue-dark); }
+
+    .secondary {
+      color: #214066;
+      background: #edf4fb;
+      border: 1px solid #d6e0ee;
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .notice,
+    .code-result {
+      display: none;
+      margin-top: 14px;
+      border-left: 3px solid var(--amber);
+      border-radius: 6px;
+      background: #fff8e8;
+      color: #694a00;
+      padding: 10px 12px;
+      font-size: 14px;
+      line-height: 1.7;
+      font-weight: 800;
+    }
+
+    .notice.show,
+    .code-result.show { display: block; }
+
+    .section {
+      margin-top: 24px;
+      padding-top: 22px;
+      border-top: 1px solid #e3e8f1;
+    }
+
+    .orders {
+      display: grid;
+      gap: 10px;
+    }
+
+    .order-card {
+      border: 1px solid #d6e0ee;
+      border-radius: 8px;
+      background: #fbfcff;
+      padding: 12px;
+    }
+
+    .order-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+      font-weight: 900;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      border-radius: 999px;
+      padding: 0 10px;
+      color: #075e39;
+      background: #dff8eb;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .pill.pending { color: #694a00; background: #fff1cf; }
+    .pill.failed { color: #8a1d1d; background: #ffe4e4; }
+
+    .order-card small {
+      display: block;
+      color: var(--muted);
+      line-height: 1.8;
+      overflow-wrap: anywhere;
+    }
+
+    .selected {
+      display: none;
+      border: 1px solid #a7e4c5;
+      border-radius: 8px;
+      background: #ecfdf4;
+      padding: 14px;
+    }
+
+    .selected.show { display: block; }
+
+    .account-value {
+      display: block;
+      margin: 8px 0 12px;
+      padding: 14px;
+      border: 1px solid #bfead1;
+      border-radius: 8px;
+      background: #ffffff;
+      color: #075e39;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 18px;
+      font-weight: 900;
+      overflow-wrap: anywhere;
+    }
+
+    .code-value {
+      display: inline-block;
+      margin: 6px 8px 6px 0;
+      color: #0b2f68;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+    }
+
+    @media (max-width: 880px) {
+      .layout { grid-template-columns: 1fr; }
+      .hero { position: static; min-height: auto; }
+      h1 { font-size: 38px; }
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+        justify-content: center;
+        padding-top: 14px;
+        padding-bottom: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="GPT登录验证码">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h10"/><path d="M7 13h6"/></svg>
+      </span>
+      <span>GPT登录验证码</span>
+    </a>
+    <a class="top-link" href="/">返回购买页</a>
+  </header>
+
+  <main class="wrap">
+    <section class="layout">
+      <aside class="hero">
+        <div>
+          <span class="badge">邮箱验证码</span>
+          <h1>查询 GPT 登录验证码</h1>
+          <p>输入下单邮箱和查询密码，选择已交付订单里的邮箱账号，再读取当前验证码。</p>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="step-index">1</span><div><b>查询订单</b><span>用下单邮箱和查询密码找回订单。</span></div></div>
+          <div class="step"><span class="step-index">2</span><div><b>选择邮箱</b><span>只能选择已交付订单中的邮箱账号。</span></div></div>
+          <div class="step"><span class="step-index">3</span><div><b>读取验证码</b><span>发送验证码后读取当前账号的验证码。</span></div></div>
+        </div>
+      </aside>
+
+      <section class="panel">
+        <h2>查询订单</h2>
+        <div class="field">
+          <label for="lookup-email">下单邮箱</label>
+          <input id="lookup-email" type="text" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="name@example.com">
+        </div>
+        <div class="field">
+          <label for="lookup-password">查询密码</label>
+          <input id="lookup-password" type="text" autocomplete="off" maxlength="128" placeholder="输入下单时设置的密码">
+        </div>
+        <div class="actions">
+          <button class="primary" type="button" id="btn-lookup">查询订单</button>
+        </div>
+        <div class="notice" id="notice"></div>
+
+        <div class="section">
+          <h2>选择邮箱</h2>
+          <div class="orders" id="orders"></div>
+        </div>
+
+        <div class="section selected" id="selected-box">
+          <h2>查询验证码</h2>
+          <strong>当前选择邮箱</strong>
+          <code class="account-value" id="selected-account">--</code>
+          <div class="actions">
+            <a class="secondary button-link" href="https://chatgpt.com/" target="_blank" rel="noopener">打开OpenAi登录界面</a>
+            <button class="primary" type="button" id="btn-fetch-code">我已发送验证码</button>
+            <button class="secondary" type="button" id="btn-refresh-code">刷新验证码</button>
+          </div>
+          <div class="code-result" id="code-result"></div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const lookupEmail = document.getElementById('lookup-email');
+    const lookupPassword = document.getElementById('lookup-password');
+    const lookupBtn = document.getElementById('btn-lookup');
+    const notice = document.getElementById('notice');
+    const ordersHost = document.getElementById('orders');
+    const selectedBox = document.getElementById('selected-box');
+    const selectedAccount = document.getElementById('selected-account');
+    const fetchCodeBtn = document.getElementById('btn-fetch-code');
+    const refreshCodeBtn = document.getElementById('btn-refresh-code');
+    const codeResult = document.getElementById('code-result');
+
+    let orders = [];
+    let selectedOrder = null;
+    let codeStartedAt = '';
+    let lastCode = '';
+
+    function normalizeEmailInput(value) {
+      return String(value || '')
+        .trim()
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .replace(/\u3000/g, ' ')
+        .replace(/[\uFF20\uFE6B]/g, '@')
+        .replace(/[\u3002\uFF0E\uFF61\uFE52]/g, '.')
+        .replace(/\s+/g, '')
+        .toLowerCase();
+    }
+
+    function normalizePasswordInput(value) {
+      return String(value || '').trim();
+    }
+
+    function isValidEmailInput(value) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmailInput(value));
+    }
+
+    function showNotice(text) {
+      notice.textContent = text;
+      notice.classList.toggle('show', Boolean(text));
+    }
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      }[char]));
+    }
+
+    async function request(url, options = {}) {
+      const res = await fetch(url, {
+        ...options,
+        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      return data;
+    }
+
+    function getStatusText(order) {
+      const labels = {
+        pending: '待支付',
+        paid: '已支付',
+        delivered: '已交付',
+        failed: '失败',
+      };
+      return labels[order?.status] || order?.status || '--';
+    }
+
+    function normalizeServerTime(value) {
+      const text = String(value || '').trim();
+      if (!text) return '';
+      if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(text)) return text;
+      return `${text.replace(' ', 'T')}Z`;
+    }
+
+    function formatBeijingTime(value) {
+      const normalized = normalizeServerTime(value);
+      if (!normalized) return '--';
+      const date = new Date(normalized);
+      if (Number.isNaN(date.getTime())) return String(value || '--');
+      const parts = new Intl.DateTimeFormat('zh-CN', {
+        timeZone: 'Asia/Shanghai',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      }).formatToParts(date).reduce((acc, part) => {
+        acc[part.type] = part.value;
+        return acc;
+      }, {});
+      return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
+    }
+
+    function setCodeResult(html, show = true) {
+      codeResult.innerHTML = html;
+      codeResult.classList.toggle('show', show);
+    }
+
+    async function copyText(text) {
+      await navigator.clipboard.writeText(String(text || '')).catch(() => {});
+    }
+
+    function setCodeButtonsDisabled(disabled) {
+      fetchCodeBtn.disabled = disabled;
+      refreshCodeBtn.disabled = disabled;
+      fetchCodeBtn.textContent = disabled ? '正在读取...' : '我已发送验证码';
+      refreshCodeBtn.textContent = disabled ? '正在刷新...' : '刷新验证码';
+    }
+
+    function resetSelectedOrder() {
+      selectedOrder = null;
+      codeStartedAt = '';
+      lastCode = '';
+      selectedAccount.textContent = '--';
+      selectedBox.classList.remove('show');
+      setCodeResult('', false);
+    }
+
+    function selectOrder(orderNo) {
+      const order = orders.find(item => item.orderNo === orderNo);
+      if (!order || order.status !== 'delivered' || !order.accountEmail) {
+        return;
+      }
+      selectedOrder = order;
+      codeStartedAt = '';
+      lastCode = '';
+      selectedAccount.textContent = order.accountEmail;
+      selectedBox.classList.add('show');
+      setCodeResult('', false);
+      selectedBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function renderOrders() {
+      resetSelectedOrder();
+      if (!orders.length) {
+        ordersHost.innerHTML = '<div class="order-card"><small>没有查到订单。</small></div>';
+        return;
+      }
+
+      ordersHost.innerHTML = orders.map(order => {
+        const status = getStatusText(order);
+        const isDelivered = order.status === 'delivered' && order.accountEmail;
+        const accountText = isDelivered ? order.accountEmail : '-';
+        const timeText = formatBeijingTime(order.deliveredAt || order.updatedAt || order.createdAt);
+        return `
+          <div class="order-card">
+            <div class="order-head">
+              <span class="pill ${escapeHtml(order.status || '')}">${escapeHtml(status)}</span>
+              <button class="${isDelivered ? 'primary' : 'secondary'}" type="button" data-order-no="${escapeHtml(order.orderNo || '')}" ${isDelivered ? '' : 'disabled'}>${isDelivered ? '选择邮箱' : '未交付'}</button>
+            </div>
+            <small>订单号：${escapeHtml(order.orderNo || '')}</small>
+            <small>邮箱账号：${escapeHtml(accountText)}</small>
+            <small>金额：${escapeHtml(order.amountText || '')}</small>
+            <small>北京时间：${escapeHtml(timeText)}</small>
+          </div>
+        `;
+      }).join('');
+
+      ordersHost.querySelectorAll('button[data-order-no]').forEach(button => {
+        button.addEventListener('click', () => selectOrder(button.dataset.orderNo));
+      });
+    }
+
+    async function readCode(resetWindow = false) {
+      if (!selectedOrder?.orderNo || !selectedOrder?.orderToken) {
+        showNotice('请先选择一个已交付订单里的邮箱。');
+        return;
+      }
+      if (resetWindow || !codeStartedAt) {
+        codeStartedAt = new Date().toISOString();
+        lastCode = '';
+      }
+
+      setCodeButtonsDisabled(true);
+      setCodeResult('<strong>正在读取验证码...</strong><div>系统正在按当前选择邮箱搜索最新验证码，请稍等。</div>');
+      try {
+        const qs = `?token=${encodeURIComponent(selectedOrder.orderToken)}`;
+        const data = await request(`/api/account-delivery/orders/${encodeURIComponent(selectedOrder.orderNo)}/login-code${qs}`, {
+          method: 'POST',
+          body: JSON.stringify({ started_at: codeStartedAt }),
+        });
+
+        if (data.found && data.code) {
+          lastCode = data.code;
+          const receivedText = data.receivedAt ? `收到时间：${escapeHtml(formatBeijingTime(data.receivedAt))}` : '';
+          setCodeResult(`
+            <strong>验证码已读取</strong>
+            <div>
+              <span class="code-value">${escapeHtml(data.code)}</span>
+              <button class="secondary" type="button" id="btn-copy-code">复制验证码</button>
+            </div>
+            <small>${receivedText}</small>
+          `);
+          document.getElementById('btn-copy-code')?.addEventListener('click', async () => {
+            await copyText(lastCode);
+            showNotice('验证码已复制。');
+          });
+        } else {
+          setCodeResult(`
+            <strong>暂时没有读取到验证码</strong>
+            <div>${escapeHtml(data.message || '请确认已经发送验证码，稍等几秒后再刷新验证码。')}</div>
+          `);
+        }
+      } catch (err) {
+        setCodeResult(`
+          <strong>读取失败</strong>
+          <div>${escapeHtml(err.message)}</div>
+        `);
+      } finally {
+        setCodeButtonsDisabled(false);
+      }
+    }
+
+    lookupBtn.addEventListener('click', async () => {
+      const email = normalizeEmailInput(lookupEmail.value);
+      const password = normalizePasswordInput(lookupPassword.value);
+      if (!isValidEmailInput(email)) {
+        showNotice('请输入正确的下单邮箱。');
+        lookupEmail.focus();
+        return;
+      }
+      if (!password) {
+        showNotice('请输入查询密码。');
+        lookupPassword.focus();
+        return;
+      }
+
+      lookupBtn.disabled = true;
+      lookupBtn.textContent = '查询中...';
+      showNotice('');
+      try {
+        const data = await request('/api/account-delivery/query-by-email', {
+          method: 'POST',
+          body: JSON.stringify({
+            buyer_email: email,
+            query_password: password,
+          }),
+        });
+        orders = Array.isArray(data.orders) ? data.orders : [];
+        renderOrders();
+      } catch (err) {
+        showNotice(err.message);
+      } finally {
+        lookupBtn.disabled = false;
+        lookupBtn.textContent = '查询订单';
+      }
+    });
+
+    fetchCodeBtn.addEventListener('click', () => readCode(true));
+    refreshCodeBtn.addEventListener('click', () => readCode(false));
+
+    [lookupEmail, lookupPassword].forEach(input => {
+      input.addEventListener('keydown', event => {
+        if (event.key === 'Enter') {
+          lookupBtn.click();
+        }
+      });
+    });
+  </script>
+</body>
+</html>

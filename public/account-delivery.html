@@ -632,7 +632,7 @@
           </div>
           <div class="actions">
             <button class="primary" type="submit" id="btn-create">提交订单</button>
-            <button class="secondary" type="button" id="btn-query-email-code">查询邮箱验证码</button>
+            <a class="secondary button-link" href="/email-code" id="btn-query-email-code">查询邮箱验证码</a>
           </div>
         </form>
 
@@ -725,7 +725,6 @@
     const lookupResult = document.getElementById('lookup-result');
     const mockMethod = document.getElementById('mock-method');
     const createBtn = document.getElementById('btn-create');
-    const queryEmailCodeBtn = document.getElementById('btn-query-email-code');
     const urlParams = new URLSearchParams(window.location.search);
     let availableStockCount = 0;
     let currentOrderNo = '';
@@ -870,10 +869,8 @@
     function setLoginCodeButtonsDisabled(disabled) {
       fetchLoginCodeBtn.disabled = disabled;
       refreshLoginCodeBtn.disabled = disabled;
-      queryEmailCodeBtn.disabled = disabled;
       fetchLoginCodeBtn.textContent = disabled ? '正在读取...' : '我已发送验证码';
       refreshLoginCodeBtn.textContent = disabled ? '正在刷新...' : '刷新验证码';
-      queryEmailCodeBtn.textContent = disabled ? '正在查询...' : '查询邮箱验证码';
     }
 
     async function readLoginVerificationCode(resetWindow = false) {
@@ -1146,10 +1143,6 @@
 
     refreshLoginCodeBtn.addEventListener('click', () => {
       readLoginVerificationCode(false);
-    });
-
-    queryEmailCodeBtn.addEventListener('click', () => {
-      readLoginVerificationCode(true);
     });
 
     function renderLookupOrders(orders) {

@@ -49,6 +49,7 @@ const maintenancePagePath = path.join(__dirname, 'public', 'maintenance.html');
 const activationOnlyPagePath = path.join(__dirname, 'public', 'activation-only.html');
 const businessPagePath = path.join(__dirname, 'public', 'business.html');
 const accountDeliveryPagePath = path.join(__dirname, 'public', 'account-delivery.html');
+const accountEmailCodePagePath = path.join(__dirname, 'public', 'account-email-code.html');
 const getSettingValueStmt = db.prepare('SELECT value FROM settings WHERE key = ?');
 
 function isPublicHost(req) {
@@ -642,7 +643,7 @@ function isAllowedAccountDeliveryPublicRequest(req) {
   const pathOnly = req.path;
   const isReadMethod = req.method === 'GET' || req.method === 'HEAD';
 
-  if (isReadMethod && ['/', '/account-delivery', '/account-delivery.html', '/favicon.ico'].includes(pathOnly)) {
+  if (isReadMethod && ['/', '/account-delivery', '/account-delivery.html', '/email-code', '/email-code.html', '/favicon.ico'].includes(pathOnly)) {
     return true;
   }
 
@@ -817,6 +818,10 @@ app.use((req, res, next) => {
       res.setHeader('Cache-Control', 'no-store');
       return res.sendFile(accountDeliveryPagePath);
     }
+    if (isReadMethod && ['/email-code', '/email-code.html'].includes(req.path)) {
+      res.setHeader('Cache-Control', 'no-store');
+      return res.sendFile(accountEmailCodePagePath);
+    }
   }
 
   if (req.isBusinessPublicHost) {
@@ -930,6 +935,11 @@ app.get(['/business', '/business.html'], (req, res) => {
 app.get(['/account-delivery', '/account-delivery.html'], (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.sendFile(accountDeliveryPagePath);
+});
+
+app.get(['/email-code', '/email-code.html'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(accountEmailCodePagePath);
 });
 
 // CDK purchase page
