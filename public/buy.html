@@ -69,11 +69,27 @@
       display: inline-flex;
     }
     .activation-page-popover {
+      gap: 8px;
       max-width: calc(100vw - 32px);
       white-space: nowrap;
       letter-spacing: 0;
       font-size: 15px;
       overflow-wrap: normal;
+    }
+    .popover-copy {
+      flex: 0 0 auto;
+      min-height: 30px;
+      padding: 0 10px;
+      border: 1px solid #b8cdf0;
+      border-radius: 8px;
+      color: #1d4ed8;
+      background: #eef5ff;
+      font-size: 13px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .popover-copy:hover {
+      background: #dfeaff;
     }
     .wrap {
       max-width: 1120px;
@@ -2764,7 +2780,7 @@
       });
     }
 
-    function setupNavPopover(link, text, extraClass = '') {
+    function setupNavPopover(link, text, extraClass = '', copyable = false) {
       if (!link) return;
       link.href = '#';
       link.removeAttribute('target');
@@ -2772,7 +2788,23 @@
 
       const popover = document.createElement('span');
       popover.className = `qq-contact-popover${extraClass ? ` ${extraClass}` : ''}`;
-      popover.textContent = text;
+      if (copyable) {
+        const value = document.createElement('span');
+        value.textContent = text;
+        const copyButton = document.createElement('button');
+        copyButton.className = 'popover-copy';
+        copyButton.type = 'button';
+        copyButton.textContent = '复制';
+        copyButton.addEventListener('click', async (event) => {
+          event.stopPropagation();
+          const copied = await copyText(text);
+          copyButton.textContent = copied ? '已复制' : '复制失败';
+          setTimeout(() => { copyButton.textContent = '复制'; }, 1400);
+        });
+        popover.append(value, copyButton);
+      } else {
+        popover.textContent = text;
+      }
       link.insertAdjacentElement('afterend', popover);
 
       link.addEventListener('click', (event) => {
@@ -2785,7 +2817,7 @@
     }
 
     setupNavPopover(document.querySelector('a[href*="wpa.qq.com"]'), '1006267937');
-    setupNavPopover(document.getElementById('proxy-activation-link'), 'https://activate.xn--2team-cd2h.com/', 'activation-page-popover');
+    setupNavPopover(document.getElementById('proxy-activation-link'), 'https://activate.xn--2team-cd2h.com/', 'activation-page-popover', true);
 
     document.addEventListener('click', (event) => {
       if (!event.target.closest('.nav-links')) {
