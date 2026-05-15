@@ -111,8 +111,12 @@ async function getLatestVerificationCode({ accountEmail, startedAt = '' } = {}) 
       user: config.user,
       pass: config.pass,
     },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
     logger: false,
   });
+  client.on('error', () => {});
 
   try {
     await client.connect();
@@ -180,7 +184,11 @@ async function getLatestVerificationCode({ accountEmail, startedAt = '' } = {}) 
       lock.release();
     }
   } catch (err) {
-    const wrapped = new Error(`读取验证码邮箱失败：${err.message}`);
+    const isAuthError = err.authenticationFailed || err.serverResponseCode === 'AUTHENTICATIONFAILED';
+    const message = isAuthError
+      ? '读取验证码邮箱失败：Gmail 登录失败，请确认已开启 IMAP，并使用 Google 应用专用密码。'
+      : `读取验证码邮箱失败：${err.message}`;
+    const wrapped = new Error(message);
     wrapped.statusCode = err.statusCode || 502;
     throw wrapped;
   } finally {
