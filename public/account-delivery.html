@@ -78,10 +78,19 @@
     }
 
     .top-actions {
-      position: relative;
       display: inline-flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 10px;
+    }
+
+    .contact-stack {
+      display: grid;
+      gap: 8px;
+    }
+
+    .contact-entry {
+      position: relative;
+      display: grid;
     }
 
     .qq-popover {
@@ -91,6 +100,7 @@
       z-index: 20;
       display: none;
       min-width: 132px;
+      max-width: min(260px, 72vw);
       border: 1px solid #c9dcff;
       border-radius: 8px;
       background: #ffffff;
@@ -101,6 +111,7 @@
       font-size: 18px;
       font-weight: 900;
       text-align: center;
+      overflow-wrap: anywhere;
     }
 
     .qq-popover.show { display: block; }
@@ -656,8 +667,16 @@
     </a>
     <div class="top-actions">
       <a class="top-link" href="https://t.me/ZC_PJF" target="_blank" rel="noopener">TG 联系</a>
-      <button class="top-link" type="button" id="btn-qq-contact">QQ 联系</button>
-      <div class="qq-popover" id="qq-popover">1006267937</div>
+      <div class="contact-stack">
+        <div class="contact-entry">
+          <button class="top-link" type="button" id="btn-qq-contact">QQ 联系</button>
+          <div class="qq-popover" id="qq-popover">1006267937</div>
+        </div>
+        <div class="contact-entry">
+          <button class="top-link" type="button" id="btn-proxy-code">代理接码</button>
+          <div class="qq-popover" id="proxy-code-popover">code.xn--2team-cd2h.com</div>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -787,8 +806,11 @@
     const productPrice = document.getElementById('price-text');
     const soldCount = document.getElementById('sold-count');
     const stockCount = document.getElementById('stock-count');
+    const topActions = document.querySelector('.top-actions');
     const qqContactBtn = document.getElementById('btn-qq-contact');
     const qqPopover = document.getElementById('qq-popover');
+    const proxyCodeBtn = document.getElementById('btn-proxy-code');
+    const proxyCodePopover = document.getElementById('proxy-code-popover');
     const form = document.getElementById('order-form');
     const notice = document.getElementById('notice');
     const statusBox = document.getElementById('order-status');
@@ -828,20 +850,34 @@
       entryConfirmBtn?.focus();
     });
 
+    function closeContactPopovers() {
+      qqPopover.classList.remove('show');
+      proxyCodePopover.classList.remove('show');
+    }
+
     qqContactBtn.addEventListener('click', event => {
       event.stopPropagation();
-      qqPopover.classList.toggle('show');
+      const shouldShow = !qqPopover.classList.contains('show');
+      closeContactPopovers();
+      qqPopover.classList.toggle('show', shouldShow);
+    });
+
+    proxyCodeBtn.addEventListener('click', event => {
+      event.stopPropagation();
+      const shouldShow = !proxyCodePopover.classList.contains('show');
+      closeContactPopovers();
+      proxyCodePopover.classList.toggle('show', shouldShow);
     });
 
     document.addEventListener('click', event => {
-      if (!qqPopover.contains(event.target) && event.target !== qqContactBtn) {
-        qqPopover.classList.remove('show');
+      if (!topActions.contains(event.target)) {
+        closeContactPopovers();
       }
     });
 
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape') {
-        qqPopover.classList.remove('show');
+        closeContactPopovers();
       }
     });
 
