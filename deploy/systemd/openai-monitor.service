@@ -15,7 +15,6 @@ Environment=ACCOUNT_DELIVERY_PUBLIC_HOSTS=business.xn--2team-cd2h.com
 Environment=ACCOUNT_DELIVERY_PUBLIC_BASE_URL=https://business.xn--2team-cd2h.com
 Environment=ACTIVATION_ONLY_PUBLIC_HOSTS=activate.xn--2team-cd2h.com
 Environment=PUBLIC_BASE_URL=https://xn--2team-cd2h.com
-Environment=OAUTH_REDIRECT_URI=https://admin.xn--2team-cd2h.com/auth/callback
 Environment=PUPPETEER_CACHE_DIR=/home/ubuntu/.cache/puppeteer
 Environment=CDK_TEAM_WORKER_CONCURRENCY=3
 Environment=BROWSER_TASK_CONCURRENCY=5

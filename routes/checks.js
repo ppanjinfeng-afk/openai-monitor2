@@ -39,12 +39,6 @@ function renderOAuthResponse(title, message, color) {
   `;
 }
 
-function getRequestOrigin(req) {
-  const proto = String(req.get('x-forwarded-proto') || req.protocol || 'https').split(',')[0].trim() || 'https';
-  const host = String(req.get('x-forwarded-host') || req.get('host') || '').split(',')[0].trim();
-  return `${proto}://${host}`;
-}
-
 function clearOAuthFlow(state) {
   const flow = activeOAuthFlows.get(state);
   if (flow?.timeoutId) {
@@ -98,55 +92,14 @@ function parseOAuthCallbackUrl(callbackUrl) {
 }
 
 function createOAuthFlowForAccount(account) {
-  const {
-    authUrl,
-    fallbackAuthUrl,
-    codeVerifier,
-    state,
-    redirectUri,
-    fallbackRedirectUri,
-  } = checker.startOAuthFlow(account.email);
+  const { authUrl, codeVerifier, state } = checker.startOAuthFlow(account.email);
   clearOAuthFlow(state);
   storeOAuthFlow(state, {
     codeVerifier,
     accountId: account.id,
     accountEmail: account.email,
-    redirectUri,
-    redirectUris: [redirectUri, fallbackRedirectUri].filter(Boolean),
   });
-  return { authUrl, fallbackAuthUrl, state, redirectUri, fallbackRedirectUri };
-}
-
-function getCallbackRedirectUri(url, flow) {
-  const callbackRedirectUri = `${url.protocol}//${url.host}${url.pathname}`;
-  if (Array.isArray(flow?.redirectUris) && flow.redirectUris.includes(callbackRedirectUri)) {
-    return callbackRedirectUri;
-  }
-  return flow?.redirectUri || checker.getOAuthRedirectUri();
-}
-
-async function ensureLocalCallbackServerForFlow(flow) {
-  const localRedirectUri = checker.getLocalOAuthRedirectUri();
-  const needsLocalCallback = flow.redirectUri === localRedirectUri || Boolean(flow.fallbackAuthUrl);
-  if (!needsLocalCallback) {
-    return flow;
-  }
-
-  try {
-    await ensureOAuthCallbackServer();
-    return flow;
-  } catch (err) {
-    if (flow.redirectUri === localRedirectUri) {
-      throw err;
-    }
-
-    console.warn('[OAuth] Local fallback callback server unavailable:', err.message);
-    return {
-      ...flow,
-      fallbackAuthUrl: '',
-      fallbackRedirectUri: '',
-    };
-  }
+  return { authUrl, state };
 }
 
 async function waitForSavedOAuthToken(accountId, previousAccessToken, timeoutMs = OAUTH_AUTO_WAIT_TOKEN_MS) {
@@ -196,26 +149,6 @@ async function handleOAuthCallback(cbReq, cbRes) {
   }
 }
 
-async function handlePublicOAuthCallback(req, res) {
-  const callbackUrl = new URL(req.originalUrl || req.url, getRequestOrigin(req));
-  try {
-    const result = await completeOAuthAuthorizationFromUrl(callbackUrl);
-    res.setHeader('Cache-Control', 'no-store');
-    return res.status(200).send(renderOAuthResponse(
-      'OAuth 授权已完成',
-      `${result.accountEmail} 的令牌已保存，可以关闭此页面并返回后台。`,
-      '#10b981'
-    ));
-  } catch (err) {
-    res.setHeader('Cache-Control', 'no-store');
-    return res.status(200).send(renderOAuthResponse(
-      'OAuth 授权失败',
-      err.message || '请返回后台重新发起授权。',
-      '#ef4444'
-    ));
-  }
-}
-
 async function completeOAuthAuthorizationFromUrl(callbackUrl) {
   const url = parseOAuthCallbackUrl(callbackUrl);
 
@@ -240,7 +173,7 @@ async function completeOAuthAuthorizationFromUrl(callbackUrl) {
   }
 
   try {
-    const tokens = await checker.exchangeCodeForTokens(code, flow.codeVerifier, getCallbackRedirectUri(url, flow));
+    const tokens = await checker.exchangeCodeForTokens(code, flow.codeVerifier);
 
     db.prepare(`
       UPDATE accounts
@@ -416,23 +349,25 @@ router.get('/logs', (req, res) => {
   res.json({ logs });
 });
 
-router.post('/oauth/start/:id', async (req, res) => {
+router.post('/oauth/start/:id', (req, res) => {
   const accountId = Number.parseInt(req.params.id, 10);
   const account = db.prepare('SELECT * FROM accounts WHERE id = ?').get(accountId);
   if (!account) {
     return res.status(404).json({ error: 'Account not found' });
   }
 
-  try {
-    const flow = await ensureLocalCallbackServerForFlow(createOAuthFlowForAccount(account));
-    return res.json(flow);
-  } catch (err) {
-    const message = err.message?.includes(`Port ${OAUTH_CALLBACK_PORT}`)
-      ? `端口 ${OAUTH_CALLBACK_PORT} 已被占用，请先关闭其他使用此端口的程序`
-      : (err.message || 'OAuth callback server failed to start');
-    console.error('[OAuth] Failed to start callback server:', err.message);
-    return res.status(500).json({ error: message });
-  }
+  ensureOAuthCallbackServer()
+    .then(() => {
+      const { authUrl, state } = createOAuthFlowForAccount(account);
+      res.json({ authUrl, state });
+    })
+    .catch(err => {
+      const message = err.message?.includes(`Port ${OAUTH_CALLBACK_PORT}`)
+        ? `端口 ${OAUTH_CALLBACK_PORT} 已被占用，请先关闭其他使用此端口的程序`
+        : (err.message || 'OAuth callback server failed to start');
+      console.error('[OAuth] Failed to start callback server:', err.message);
+      res.status(500).json({ error: message });
+    });
 });
 
 router.post('/oauth/auto/:id', async (req, res) => {
@@ -443,27 +378,19 @@ router.post('/oauth/auto/:id', async (req, res) => {
   }
 
   let authUrl = '';
-  let fallbackAuthUrl = '';
-  let redirectUri = '';
-  let fallbackRedirectUri = '';
   let state = '';
 
   try {
-    const flow = await ensureLocalCallbackServerForFlow(createOAuthFlowForAccount(account));
+    await ensureOAuthCallbackServer();
+    const flow = createOAuthFlowForAccount(account);
     authUrl = flow.authUrl;
-    fallbackAuthUrl = flow.fallbackAuthUrl || '';
-    redirectUri = flow.redirectUri || '';
-    fallbackRedirectUri = flow.fallbackRedirectUri || '';
     state = flow.state;
 
     if (!account.password) {
       return res.status(409).json({
         error: '该账号没有保存密码，无法自动授权，请使用人工授权备用流程',
         authUrl,
-        fallbackAuthUrl,
         state,
-        redirectUri,
-        fallbackRedirectUri,
         manual_fallback: true,
       });
     }
@@ -492,10 +419,7 @@ router.post('/oauth/auto/:id', async (req, res) => {
     return res.status(400).json({
       error: `自动授权失败：${message}`,
       authUrl,
-      fallbackAuthUrl,
       state,
-      redirectUri,
-      fallbackRedirectUri,
       manual_fallback: true,
     });
   }
@@ -519,7 +443,5 @@ router.post('/oauth/complete', async (req, res) => {
     return res.status(400).json({ error: err.message || 'OAuth completion failed' });
   }
 });
-
-router.handlePublicOAuthCallback = handlePublicOAuthCallback;
 
 module.exports = router;

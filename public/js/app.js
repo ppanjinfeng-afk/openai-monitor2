@@ -5508,17 +5508,16 @@ App.oauthAccount = async function(id) {
       ? this.accounts.find(item => Number(item.id) === Number(id))
       : null;
     const authUrl = err.data?.authUrl || '';
-    const fallbackAuthUrl = err.data?.fallbackAuthUrl || '';
 
     if (authUrl) {
       const popup = window.open(authUrl, '_blank', 'noopener,noreferrer');
-      this.showModal('完成 OAuth 授权', Components.oauthAssistModal(account, authUrl, fallbackAuthUrl), { type: 'oauth' });
+      this.showModal('完成 OAuth 授权', Components.oauthAssistModal(account, authUrl), { type: 'oauth' });
       this.bindOAuthAssistHandlers();
       document.getElementById('oauth-callback-url')?.focus();
       this.toast(
         popup
-          ? `${err.message}。已打开授权页，授权完成后会直接回到后台保存令牌`
-          : `${err.message}。请点击弹窗里的“打开授权页”`,
+          ? `${err.message}。已打开授权页；看到 localhost 错误后复制地址栏链接粘回后台`
+          : `${err.message}。请点击弹窗里的“打开授权页”，看到 localhost 错误后复制地址栏链接`,
         'warning'
       );
       setTimeout(() => this.loadAccounts(), 5000);
